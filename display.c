@@ -42,8 +42,6 @@ Disp_Render(Frame * frm)
 		glTranslatef(-230.0f, 0, 0);
 		Font_Print(fnt_reg, frm, disp_height - 20);
 	glPopMatrix();
-	
-	//SDL_GL_SwapBuffers();
 }
 
 void

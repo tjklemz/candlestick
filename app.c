@@ -49,6 +49,10 @@ App_OnKeyDown(unsigned char key)
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
+	//fn-delete on mac (actual delete)
+	case 239:
+	//delete on mac (actual backspace)
+	case 127:
 	case '\b':
 		Frame_DeleteCh(frm);
 		break;
