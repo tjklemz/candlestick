@@ -18,12 +18,15 @@ void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC);
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
 				   LPSTR lpCmdLine, int iCmdShow)
 {
+	HACCEL hAccel;
 	WNDCLASS wc;
 	HWND hWnd;
 	HDC hDC;
 	HGLRC hRC;
 	MSG msg;
 	BOOL quit = FALSE;
+	
+	hAccel = LoadAccelerators(hInstance,"ACCEL");
 	
 	// register window class
 	wc.style = CS_OWNDC;
@@ -56,7 +59,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 			if (msg.message == WM_QUIT) {
 				quit = TRUE;
 			} else {
-				TranslateMessage(&msg);
+				if(!TranslateAccelerator(hWnd, hAccel, &msg)) {
+					TranslateMessage(&msg);
+				}
 				DispatchMessage(&msg);
 			}
 		} else {
@@ -149,12 +154,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		App_OnKeyDown(wParam);
 		return 0;
 		
+	case WM_COMMAND:
+		if(LOWORD(wParam) == 501) {
+			MessageBox(hWnd, "yeah!", "control", MB_OK);
+		}
+		return 0;
+		
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		/*case 'S':
+			if(GetKeyState(VK_CONTROL) < 0) {
+				MessageBox(hWnd, "yeah!", "control-s", MB_OK);
+			}
+			break;*/
 		case VK_ESCAPE:
 			PostQuitMessage(0);
-			return 0;
+			break;
 		case VK_F1:
 			{
 				static BOOL fullscreen = FALSE;
@@ -165,7 +181,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
 				}
 			}
-			return 0;
+			break;
+		default:
+			break;
 		}
 		return 0;
 	
