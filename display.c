@@ -1,15 +1,15 @@
 #include "display.h"
 #include "opengl.h"
-#include "font.h"
+#include "fnt.h"
 
 static int disp_height = 1;
-static Font * fnt_reg = 0;
+static Fnt * fnt_reg = 0;
 static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 
 void
-Disp_Init(int font_size)
+Disp_Init(int fnt_size)
 {
-	fnt_reg = Font_Init(fnt_reg_name, font_size);
+	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size);
 
 	glShadeModel(GL_SMOOTH);
     glClearColor(1.0f, 1.0f, 0.97f, 0.0f);
@@ -22,7 +22,7 @@ Disp_Init(int font_size)
 void
 Disp_Destroy()
 {
-	Font_Destroy(fnt_reg);
+	Fnt_Destroy(fnt_reg);
 }
 
 //Frame is passed in, since input needs to deal with the Frame
@@ -40,7 +40,7 @@ Disp_Render(Frame * frm)
 		glLoadIdentity();
 		//have to shift over since origin is in the center by default
 		glTranslatef(-230.0f, 0, 0);
-		Font_Print(fnt_reg, frm, disp_height - 20);
+		Fnt_Print(fnt_reg, frm, disp_height - 20);
 	glPopMatrix();
 }
 

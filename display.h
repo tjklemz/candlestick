@@ -4,7 +4,7 @@
 #include "frame.h"
 
 void
-Disp_Init(int font_size);
+Disp_Init(int fnt_size);
 
 void
 Disp_Destroy();

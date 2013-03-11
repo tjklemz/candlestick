@@ -2,11 +2,13 @@
 #include "display.h"
 #include "frame.h"
 
-//should Appdow handle the frame? or the input? or is that the same thing?
+#include <ctype.h>
+
+//should Window handle the frame? or the input? or is that the same thing?
 //in other words, who passes the frame to Display? who calls render?
 
-//Is App turning into Appdow? or vice-versa?
-//or is App simply delegating to Appdow so that Appdow can respond to events
+//Is App turning into Window? or vice-versa?
+//or is App simply delegating to Window so that Window can respond to events
 //regardless of platform, etc (yes)
 
 
@@ -17,9 +19,22 @@ static Frame * frm = 0;
 
 void
 App_OnInit()
-{
+{	
+	//checks if already initialized; if so, don't recreate the frame
+	//using this for the linux app; should probably refactor so that
+	// these funcs can be re-called (kinda like malloc vs realloc)
+	//OR, could refactor so that the Display module has a pointer struct
+	// that way can create and destroy the Display easier...
+	//This simple check is fine for now, but if it gets any more
+	// complicated, definitely need to refactor.
+	//c.f. main.c on the linux fullscreen issue that caused this mess.
+	if(!frm) {
+		frm = Frame_Init(WIDTH_PTS / FONT_SIZE);
+	} else {
+		Disp_Destroy();
+	}
+	
 	Disp_Init(FONT_SIZE);
-	frm = Frame_Init(WIDTH_PTS / FONT_SIZE);
 }
 
 void
@@ -61,7 +76,9 @@ App_OnKeyDown(unsigned char key)
 		Frame_InsertNewLine(frm);
 		break;
 	default:
-		Frame_InsertCh(frm, key);
+		if(isprint(key)) {
+			Frame_InsertCh(frm, key);
+		}
 		break;
 	}
 }
