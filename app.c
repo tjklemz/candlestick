@@ -13,7 +13,7 @@
 //regardless of platform, etc (yes)
 
 
-static const int FONT_SIZE = 18;
+static const int FONT_SIZE = 17;
 static const int WIDTH_PTS = 828;
 
 static Frame * frm = 0;

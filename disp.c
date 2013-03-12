@@ -4,7 +4,7 @@
 
 static int disp_height = 1;
 static Fnt * fnt_reg = 0;
-static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
+static const char * const fnt_reg_name = "./font/CourierPrime.ttf";
 
 void
 Disp_Init(int fnt_size)

@@ -9,7 +9,7 @@
 #include "fnt.h"
 #include <math.h>
 
-#define GLYPH_SPACING 13
+#define GLYPH_SPACING 14
 #define NUM_CHARS 255
 
 //defined as Fnt in the interface
@@ -311,6 +311,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int y)
 	float modelview_matrix[16];
 	Line * cur_line;
 	int line = 1;
+	int len = 0;
 
 	//print using screen coords
 	PushScreenCoordMat();
@@ -331,16 +332,28 @@ Fnt_Print(Fnt * fnt, Frame * frm, int y)
 	Frame_IterBegin(frm);
 	
 	while((cur_line = Frame_IterNext(frm))) {
+		len = Line_Length(cur_line);
 		glPushMatrix();
 			glLoadIdentity();
 			glTranslatef((float)x, (float)y-h*line, 0);
 			glMultMatrixf(modelview_matrix);
-			glCallLists(Line_Length(cur_line), GL_UNSIGNED_BYTE, Line_Text(cur_line));
+			glCallLists(len, GL_UNSIGNED_BYTE, Line_Text(cur_line));
 		glPopMatrix();
 		++line;
 	}
 
-	glPopAttrib();	
+	glPopAttrib();
+	
+	//display cursor
+	glPushMatrix();
+		glLoadIdentity();
+		glTranslatef((float)x + len*GLYPH_SPACING, (float)y-h*(line-1), 0);
+		glMultMatrixf(modelview_matrix);
+		glBegin(GL_LINES);
+			glVertex2i(0, 0);
+			glVertex2i(GLYPH_SPACING, 0);
+		glEnd();
+	glPopMatrix();
 
 	//go back to world coords
 	PopScreenCoordMat();

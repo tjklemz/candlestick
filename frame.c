@@ -32,6 +32,14 @@ Line_Length(Line * line)
 	return line->len;
 }
 
+static
+void
+Line_SetLength(Line * line, int len)
+{
+	assert(len <= line->size);
+	line->len = len;
+}
+
 unsigned char*
 Line_Text(Line * line)
 {
@@ -152,13 +160,15 @@ Frame_SoftWrap(Frame * frm)
 	
 	//make sure it is worth wrapping (greater than zero)
 	if(i > 0) {
-		full_line->len = i;
+		//printf("New full_line len: %d\n", i);
+		Line_SetLength(full_line, i);
 		
 		wrap_amount = full_line->size - i - 1;
 		
 		memcpy(new_line->text, &full_line->text[i+1], wrap_amount*sizeof(unsigned char));
 		
-		new_line->len = wrap_amount;
+		Line_SetLength(new_line, wrap_amount);
+		//printf("New new_line len: %d\n", wrap_amount);
 	}
 }
 
@@ -174,23 +184,26 @@ Frame_UndoSoftWrap(Frame * frm)
 	if(cur_line->len > 0 && frm->cur_line->prev) {
 		Line * prev_line = (Line *)frm->cur_line->prev->data;
 		
-		int i = cur_line->len;
-		
-		while(cur_line->text[i] != ' ' && i > 0) {
-			--i;
-		}
-		
-		//if i is not zero, then no need to soft wrap
-		// (i.e. not on the first word of the line)
-		if(i == 0) {
-			//see if the previous line has room for the word
-			int prev_room = prev_line->size - prev_line->len;
-			int cur_room = cur_line->len;
+		//only undo soft wrap if the line was soft wrapped
+		if(prev_line->end == SOFT) {
+			int i = cur_line->len;
 			
-			if(prev_room >= cur_room) {
-				memcpy(&prev_line->text[prev_line->len+1], cur_line->text, cur_room*sizeof(unsigned char));
-				prev_line->len += cur_room + 1;
-				Frame_DeleteLine(frm);
+			while(cur_line->text[i] != ' ' && i > 0) {
+				--i;
+			}
+			
+			//if i is not zero, then no need to soft wrap
+			// (i.e. not on the first word of the line)
+			if(i == 0) {
+				//see if the previous line has room for the word
+				int prev_room = prev_line->size - prev_line->len;
+				int cur_room = cur_line->len;
+				
+				if(prev_room > cur_room) {
+					memcpy(&prev_line->text[prev_line->len+1], cur_line->text, cur_room*sizeof(unsigned char));
+					Line_SetLength(prev_line, prev_line->len + cur_room + 1);
+					Frame_DeleteLine(frm);
+				}
 			}
 		}
 	}
