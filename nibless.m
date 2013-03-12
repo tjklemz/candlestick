@@ -218,7 +218,7 @@ static SysView *view;
 	[SysDelegate populateMainMenu];
 
 	cgr = CGDisplayBounds(CGMainDisplayID());
-	rect = NSMakeRect(50, 100, 640, 480);
+	rect = NSMakeRect(50, 100, 809, 500);
 
 	window = [[NSWindow alloc] initWithContentRect: rect
 		styleMask: NSClosableWindowMask | NSTitledWindowMask |

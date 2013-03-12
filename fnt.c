@@ -9,7 +9,7 @@
 #include "fnt.h"
 #include <math.h>
 
-#define GLYPH_SPACING 14
+#define GLYPH_SPACING 12
 #define NUM_CHARS 255
 
 //defined as Fnt in the interface
