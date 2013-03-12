@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 struct frame {
 	int line_len;
@@ -13,10 +14,16 @@ struct frame {
 	Node * cur_line;
 };
 
+typedef enum line_end_type {
+	SOFT,
+	HARD
+} LINE_END;
+
 struct line_type {
 	unsigned char * text;
 	int len;
 	int size;
+	LINE_END end;
 };
 
 int
@@ -39,6 +46,7 @@ Line_CreateLine(int size)
 	line->text = (unsigned char *)malloc(sizeof(unsigned char) * size);
 	line->size = size;
 	line->len = 0;
+	line->end = SOFT;
 	
 	return line;
 }
@@ -117,17 +125,96 @@ Frame_Destroy(Frame * frm)
 	free(frm);
 }
 
+//SoftWrap assumes current line is full
+// Calls Frame_AddLine
+
+static
+void
+Frame_SoftWrap(Frame * frm)
+{
+	int i;
+	int wrap_amount;
+	Line * full_line;
+	Line * new_line;
+	
+	full_line = (Line *)frm->cur_line->data;
+	
+	assert(full_line->len == full_line->size);
+	
+	Frame_AddLine(frm);
+	
+	new_line = (Line *)frm->cur_line->data;
+	
+	i = full_line->len - 1;
+	while(full_line->text[i] != ' ' && i > 0) {
+		--i;
+	}
+	
+	//make sure it is worth wrapping (greater than zero)
+	if(i > 0) {
+		full_line->len = i;
+		
+		wrap_amount = full_line->size - i - 1;
+		
+		memcpy(new_line->text, &full_line->text[i+1], wrap_amount*sizeof(unsigned char));
+		
+		new_line->len = wrap_amount;
+	}
+}
+
+//if there's room on the previous line, tries to do soft wrap
+//assumes that the current line has at least one character
+//Will call Frame_DeleteLine if undoes the soft wrap
+static
+void
+Frame_UndoSoftWrap(Frame * frm)
+{
+	Line * cur_line = (Line *)frm->cur_line->data;
+	
+	if(cur_line->len > 0 && frm->cur_line->prev) {
+		Line * prev_line = (Line *)frm->cur_line->prev->data;
+		
+		int i = cur_line->len;
+		
+		while(cur_line->text[i] != ' ' && i > 0) {
+			--i;
+		}
+		
+		//if i is not zero, then no need to soft wrap
+		// (i.e. not on the first word of the line)
+		if(i == 0) {
+			//see if the previous line has room for the word
+			int prev_room = prev_line->size - prev_line->len;
+			int cur_room = cur_line->len;
+			
+			if(prev_room >= cur_room) {
+				memcpy(&prev_line->text[prev_line->len+1], cur_line->text, cur_room*sizeof(unsigned char));
+				prev_line->len += cur_room + 1;
+				Frame_DeleteLine(frm);
+			}
+		}
+	}
+}
+
 void
 Frame_InsertCh(Frame * frm, unsigned char ch)
 {
 	Line * cur_line = (Line *)frm->cur_line->data;
 	
-	if(cur_line->len >= cur_line->size && ch != ' ') {
-		Frame_AddLine(frm);
-		cur_line = (Line *)frm->cur_line->data;
+	if(cur_line->len < cur_line->size) {
+		Line_InsertCh(cur_line, ch);
+	} else {
+		//reached the end of the line, make sure it is soft
+		cur_line->end = SOFT;
+		
+		if(ch != ' ') {
+			Frame_SoftWrap(frm);
+			cur_line = (Line *)frm->cur_line->data;
+			Line_InsertCh(cur_line, ch);
+		} else {
+			Frame_AddLine(frm);
+		}
 	}
-	
-	Line_InsertCh(cur_line, ch);
 }
 
 void
@@ -137,6 +224,9 @@ Frame_DeleteCh(Frame * frm)
 	
 	if(cur_line->len > 0) {
 		Line_DeleteCh(cur_line);
+		if(cur_line->len > 0) {
+			Frame_UndoSoftWrap(frm);
+		}
 	} else {
 		Frame_DeleteLine(frm);
 	}
@@ -145,6 +235,9 @@ Frame_DeleteCh(Frame * frm)
 void
 Frame_InsertNewLine(Frame * frm)
 {
+	Line * cur_line = (Line *)frm->cur_line->data;
+	cur_line->end = HARD;
+	
 	Frame_AddLine(frm);
 }
 
