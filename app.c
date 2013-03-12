@@ -1,7 +1,8 @@
 #include "app.h"
-#include "display.h"
+#include "disp.h"
 #include "frame.h"
 
+#include <stdio.h>
 #include <ctype.h>
 
 //should Window handle the frame? or the input? or is that the same thing?
@@ -59,6 +60,7 @@ App_OnRender()
 void
 App_OnKeyDown(unsigned char key)
 {
+	//char ch[] = {key, '\0'};
 	switch(key)
 	{
 	case '\t':
@@ -76,9 +78,13 @@ App_OnKeyDown(unsigned char key)
 		Frame_InsertNewLine(frm);
 		break;
 	default:
-		if(isprint(key)) {
+		//supports Latin-1 set
+		//only non-printing character >= space (32) is DEL (127)
+		//	which is taken care of already
+		if(key >= 32) {
 			Frame_InsertCh(frm, key);
 		}
+		//puts(ch);
 		break;
 	}
 }

@@ -4,7 +4,7 @@ CC = gcc -Wall -O2
 
 BINARY = candlestick
 
-SOURCE = app.c display.c fnt.c frame.c dlist.c
+SOURCE = app.c disp.c fnt.c frame.c dlist.c
 
 ifeq ($(UNAME), Darwin)
 	LDFLAGS	= -framework Cocoa -framework OpenGL

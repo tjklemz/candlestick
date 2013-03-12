@@ -138,7 +138,6 @@ int main(int argc, char *argv[])
 						DestroyWindow();
 						CreateWindow();
 						App_OnInit();
-						
 						break;
 					}
 					default:

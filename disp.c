@@ -1,4 +1,4 @@
-#include "display.h"
+#include "disp.h"
 #include "opengl.h"
 #include "fnt.h"
 

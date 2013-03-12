@@ -10,6 +10,7 @@
 #include <math.h>
 
 #define GLYPH_SPACING 13
+#define NUM_CHARS 255
 
 //defined as Fnt in the interface
 
@@ -239,7 +240,7 @@ Fnt_Init(const char * fname, unsigned int height)
 
 	Fnt * fnt = (Fnt *)malloc(sizeof(Fnt));
 	
-	fnt->textures = (GLuint *)malloc(sizeof(GLuint) * 128);
+	fnt->textures = (GLuint *)malloc(sizeof(GLuint) * NUM_CHARS);
 	fnt->height = (float)height;
 
 	if (FT_Init_FreeType(&library)) { 
@@ -256,11 +257,11 @@ Fnt_Init(const char * fname, unsigned int height)
 	// (h << 6 is just a prettier way of writting h*64)
 	FT_Set_Char_Size(face, height << 6, height << 6, 96, 96);
 
-	fnt->list_base = glGenLists(128);
-	glGenTextures(128, fnt->textures );
+	fnt->list_base = glGenLists(NUM_CHARS);
+	glGenTextures(NUM_CHARS, fnt->textures );
 
 	//This is where we actually create each of the fnts display lists.
-	for(ch = 0; ch < 255; ++ch) {
+	for(ch = 0; ch < NUM_CHARS; ++ch) {
 		Fnt_MakeDisplayList(face, ch, fnt->list_base, fnt->textures);
 	}
 
@@ -282,9 +283,9 @@ void
 Fnt_Destroy(Fnt * fnt) 
 {
 	//list_base
-	glDeleteLists(fnt->list_base, 128);
+	glDeleteLists(fnt->list_base, NUM_CHARS);
 	//textures
-	glDeleteTextures(128, fnt->textures);
+	glDeleteTextures(NUM_CHARS, fnt->textures);
 	free(fnt->textures);
 	//height
 	fnt->height = 0;
