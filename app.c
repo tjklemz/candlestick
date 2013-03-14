@@ -14,7 +14,7 @@
 
 
 static const int FONT_SIZE = 18;
-static const int WIDTH_PTS = 828;
+static const int WIDTH_PTS = 936;
 
 static Frame * frm = 0;
 

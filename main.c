@@ -111,6 +111,9 @@ CreateWindow()
 
 int main(int argc, char *argv[])
 {
+	char text[255];
+	KeySym key;
+	
 	CreateWindow();
 	
 	App_OnInit();
@@ -123,9 +126,6 @@ int main(int argc, char *argv[])
 				XGetWindowAttributes(dpy, win, &gwa);
 				App_OnResize(gwa.width, gwa.height);
 			} else if(xev.type == KeyPress) {
-				char text[255];
-				KeySym key;
-				
 				XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
 				
 				switch(key) {
