@@ -5,16 +5,13 @@
 #include <stdio.h>
 #include <ctype.h>
 
-//should Window handle the frame? or the input? or is that the same thing?
-//in other words, who passes the frame to Display? who calls render?
+//This class is really an "App Delegate" that simply tells the other
+// classes what to do.
 
-//Is App turning into Window? or vice-versa?
-//or is App simply delegating to Window so that Window can respond to events
-//regardless of platform, etc (yes)
-
-
-static const int FONT_SIZE = 18;
-static const int WIDTH_PTS = 936;
+#define FONT_SIZE 18
+#define CHARS_PER_LINE 64
+//static const int FONT_SIZE = 18;
+//static const int WIDTH_PTS = 1152;
 
 static Frame * frm = 0;
 
@@ -30,7 +27,7 @@ App_OnInit()
 	// complicated, definitely need to refactor.
 	//c.f. main.c on the linux fullscreen issue that caused this mess.
 	if(!frm) {
-		frm = Frame_Init(WIDTH_PTS / FONT_SIZE);
+		frm = Frame_Init(CHARS_PER_LINE);
 	} else {
 		Disp_Destroy();
 	}

@@ -12,6 +12,10 @@ Line_Length(Line * line);
 unsigned char*
 Line_Text(Line * line);
 
+//returns number of characters per line
+int
+Frame_Length(Frame * frm);
+
 Frame*
 Frame_Init(int line_len);
 

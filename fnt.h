@@ -25,6 +25,11 @@
 typedef struct fnt_data Fnt;
 
 /**********************************************************************
+ * return the font size in points
+ **********************************************************************/
+float Fnt_Size(Fnt * fnt);
+
+/**********************************************************************
  * creates a fnt with a given name and height (in points)
  **********************************************************************/
 Fnt * Fnt_Init(const char * fname, unsigned int height);
@@ -38,11 +43,7 @@ void Fnt_Destroy(Fnt * fnt);
  * prints text at window coords (x,y) using the fnt
  **********************************************************************/
 
-//passing in the y is temporary hack; once scrolling is implemented, all
-//that will be in Frame or another module (probably Frame, though)
-//OR, will always pass in an x and a y, since that is a bit window specific...
-//just not sure yet...
-void Fnt_Print(Fnt * fnt, Frame * frm, int y);
+void Fnt_Print(Fnt * fnt, Frame * frm, int x, int y);
 
 
 #endif

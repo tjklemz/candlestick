@@ -7,8 +7,8 @@
 
 static const char * const APP_NAME = "Candlestick";
 
-#define WIN_INIT_WIDTH  809
-#define WIN_INIT_HEIGHT 500
+#define WIN_INIT_WIDTH  850
+#define WIN_INIT_HEIGHT 525
 
 static Display * dpy;
 static Window root;
@@ -56,6 +56,9 @@ CreateWindow()
 	unsigned long valuemask = 0;
 	int width;
 	int height;
+	XWindowAttributes xwa;
+	int desktop_w;
+	int desktop_h;
 	
 	dpy = XOpenDisplay(NULL);
 
@@ -76,16 +79,19 @@ CreateWindow()
 
 	swa.colormap = cmap;
 	swa.event_mask = ExposureMask | KeyPressMask;
+	swa.background_pixel = 1;
+	
+	//get width and height of desktop
+	XGetWindowAttributes(dpy, DefaultRootWindow(dpy), &xwa);
+	desktop_w = xwa.width;
+	desktop_h = xwa.height;
 	
 	if(fullscreen) {
-		//get proper width and height for fullscreen
-		XWindowAttributes xwa;
-		XGetWindowAttributes(dpy, DefaultRootWindow(dpy), &xwa);
-		width = xwa.width;
-		height = xwa.height;
 		//crazy masking hack to bypass window manager (i.e. pure X11)
 		swa.override_redirect = True;
 		valuemask |= CWOverrideRedirect;
+		width = desktop_w;
+		height = desktop_h;
 	} else {
 		width = WIN_INIT_WIDTH;
 		height = WIN_INIT_HEIGHT;
@@ -106,7 +112,26 @@ CreateWindow()
 	XGrabPointer(dpy, win, True, ButtonPressMask,
 		GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 		
+	if(!fullscreen) {
+		int x;
+		int y;
+		
+		x = (desktop_w - width) / 2;
+		y = (desktop_h - height) / 2;
+		
+		XMoveWindow(dpy, win, x, y);
+	}
+		
 	EnableOpenGL();
+}
+
+void
+ToggleFullscreen()
+{
+	fullscreen = !fullscreen;
+	DestroyWindow();
+	CreateWindow();
+	App_OnInit();
 }
 
 int main(int argc, char *argv[])
@@ -134,10 +159,7 @@ int main(int argc, char *argv[])
 						break;
 					case XK_F1:
 					{
-						fullscreen = !fullscreen;
-						DestroyWindow();
-						CreateWindow();
-						App_OnInit();
+						ToggleFullscreen();
 						break;
 					}
 					default:

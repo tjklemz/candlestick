@@ -16,9 +16,16 @@
 
 struct fnt_data {
 	float height;		//in points
+	float width;
 	GLuint * textures;	//list of textures
 	GLuint list_base;	//beginning texture id
 };
+
+float
+Fnt_Size(Fnt * fnt)
+{
+	return GLYPH_SPACING;// + 1 / GLYPH_SPACING;
+}
 
 
 /**********************************************************************
@@ -130,7 +137,7 @@ static int NextP2(int a)
 
 static 
 void 
-Fnt_MakeDisplayList(FT_Face face, unsigned char ch, GLuint list_base, GLuint * tex_base)
+Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, unsigned char ch, GLuint list_base, GLuint * tex_base)
 {
 	GLuint textureID = tex_base[(int)ch];
 	GLuint listID = list_base + (GLuint)ch;
@@ -143,6 +150,10 @@ Fnt_MakeDisplayList(FT_Face face, unsigned char ch, GLuint list_base, GLuint * t
 	FT_Glyph_To_Bitmap(&glyph, ft_render_mode_normal, 0, 1);
 	bitmap_glyph = (FT_BitmapGlyph)glyph;
 	bitmap = &bitmap_glyph->bitmap;
+	
+	if(bitmap->width > fnt->width) {
+		fnt->width = bitmap->width;
+	}
 	
 	Fnt_MakeGlyphTexture(bitmap, textureID, listID);
 	
@@ -242,6 +253,7 @@ Fnt_Init(const char * fname, unsigned int height)
 	
 	fnt->textures = (GLuint *)malloc(sizeof(GLuint) * NUM_CHARS);
 	fnt->height = (float)height;
+	fnt->width = 0;
 
 	if (FT_Init_FreeType(&library)) { 
 		printf("FT_Init_FreeType failed. Something's wrong with FreeType");
@@ -262,7 +274,7 @@ Fnt_Init(const char * fname, unsigned int height)
 
 	//This is where we actually create each of the fnts display lists.
 	for(ch = 0; ch < NUM_CHARS; ++ch) {
-		Fnt_MakeDisplayList(face, ch, fnt->list_base, fnt->textures);
+		Fnt_MakeDisplayList(fnt, face, ch, fnt->list_base, fnt->textures);
 	}
 
 	//display lists are created; don't need the fnt face or library
@@ -302,9 +314,8 @@ Fnt_Destroy(Fnt * fnt)
  **********************************************************************/
 
 void
-Fnt_Print(Fnt * fnt, Frame * frm, int y)
+Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 {
-	static int x = 320;
 	GLuint flist = fnt->list_base;
 	//make the line height bigger than the fnt so space between lines
 	float h = fnt->height / .63f;

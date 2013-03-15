@@ -113,6 +113,12 @@ Frame_DeleteLine(Frame * frm)
 	}
 }
 
+int
+Frame_Length(Frame * frm)
+{
+	return frm->line_len;
+}
+
 Frame *
 Frame_Init(int line_len)
 {

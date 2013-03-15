@@ -2,7 +2,8 @@
 #include "opengl.h"
 #include "fnt.h"
 
-static int disp_height = 1;
+static int disp_h = 1;
+static int disp_w = 1;
 static Fnt * fnt_reg = 0;
 static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 
@@ -30,6 +31,10 @@ Disp_Destroy()
 void
 Disp_Render(Frame * frm)
 {
+	//window coords for start of frame
+	float disp_x = (disp_w - (Frame_Length(frm)*Fnt_Size(fnt_reg))) / 2;
+	float disp_y = disp_h - 20;
+	
  	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 	glTranslatef(0.0f, 0.0f, -1.0f);
@@ -38,9 +43,7 @@ Disp_Render(Frame * frm)
 
 	glPushMatrix();
 		glLoadIdentity();
-		//have to shift over since origin is in the center by default
-		glTranslatef(-230.0f, 0, 0);
-		Fnt_Print(fnt_reg, frm, disp_height - 20);
+		Fnt_Print(fnt_reg, frm, disp_x, disp_y);
 	glPopMatrix();
 }
 
@@ -55,7 +58,8 @@ Disp_Resize(int w, int h)
 		h = 1;
 	}
 
-	disp_height = h;
+	disp_h = h;
+	disp_w = w;
 
     ratio = (GLfloat)w / (GLfloat)h;
 
