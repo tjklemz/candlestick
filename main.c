@@ -100,8 +100,9 @@ CreateWindow()
 		0, vi->depth, InputOutput, vi->visual, 
 		CWColormap | CWEventMask | valuemask, &swa);
 	
-	//XMapRaised: same as XMapWindow, but brings the win to front
-	XMapRaised(dpy, win);
+	XMapWindow(dpy, win);
+	//lower first, move it, enable opengl, *then* show it
+	XLowerWindow(dpy, win);
 	XStoreName(dpy, win, APP_NAME);
 	
 	XGrabKeyboard(dpy, win, True, GrabModeAsync,
@@ -118,8 +119,12 @@ CreateWindow()
 		
 		XMoveWindow(dpy, win, x, y);
 	}
-		
+	
+	
+	// make sure to enable OpenGL before showing window,
+	// otherwise weird window flash/artifact for a second.
 	EnableOpenGL();
+	XRaiseWindow(dpy, win);
 }
 
 void
