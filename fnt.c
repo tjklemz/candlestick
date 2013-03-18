@@ -7,6 +7,7 @@
  **********************************************************************/
 
 #include "fnt.h"
+#include "utils.h"
 #include <math.h>
 
 #define GLYPH_SPACING 12
@@ -25,23 +26,6 @@ float
 Fnt_Size(Fnt * fnt)
 {
 	return GLYPH_SPACING;// + 1 / GLYPH_SPACING;
-}
-
-
-/**********************************************************************
- * nextP2
- * 
- * gets the first power of 2 that is greater than or equal to
- * the passed in integer
- * 
- * Should probably be in a utilities file
- **********************************************************************/
-
-static int NextP2(int a)
-{
-	int rval = 1;
-	while (rval < a) rval <<= 1;
-	return rval;
 }
 
 
@@ -196,47 +180,6 @@ Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, unsigned char ch, GLuint list_base,
 
 
 /**********************************************************************
- * PushScreenCoordMat
- * 
- * makes object world coords identical to window coords
- * the new projection matrix is left on the stack
- **********************************************************************/
-
-static 
-void 
-PushScreenCoordMat() 
-{
-	GLint viewport[4];
-
-	glPushAttrib(GL_TRANSFORM_BIT);
-	glGetIntegerv(GL_VIEWPORT, viewport);
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-		glLoadIdentity();
-		gluOrtho2D(viewport[0],viewport[2],viewport[1],viewport[3]);
-	//the matrix is now on the stack and setup; leave it
-	glPopAttrib();
-}
-
-
-/**********************************************************************
- * PopScreenCoordMat
- * 
- * pops the projection matrix without changing the current matrix mode
- **********************************************************************/
-
-static 
-void 
-PopScreenCoordMat() 
-{
-	glPushAttrib(GL_TRANSFORM_BIT);
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glPopAttrib();
-}
-
-
-/**********************************************************************
  * Fnt_Init
  * 
  * creates a fnt from the specified fnt name and height
@@ -321,7 +264,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 	float h = fnt->height / .63f;
 	float modelview_matrix[16];
 	Line * cur_line;
-	int line = 1;
+	int line = 0;
 	int len = 0;
 
 	//print using screen coords
@@ -339,26 +282,33 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 	glListBase(flist);
 
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
-
-	Frame_IterBegin(frm);
 	
-	while((cur_line = Frame_IterNext(frm))) {
+	glPushMatrix();
+	
+	Frame_IterEnd(frm);
+	while((cur_line = Frame_IterPrev(frm))) {
 		len = Line_Length(cur_line);
-		glPushMatrix();
-			glLoadIdentity();
-			glTranslatef((float)x, (float)y-h*line, 0);
-			glMultMatrixf(modelview_matrix);
-			glCallLists(len, GL_UNSIGNED_BYTE, Line_Text(cur_line));
-		glPopMatrix();
+		glLoadIdentity();
+		glTranslatef((float)x, (float)y + h*line, 0);
+		glMultMatrixf(modelview_matrix);
+		glCallLists(len, GL_UNSIGNED_BYTE, Line_Text(cur_line));
 		++line;
 	}
-
+	
+	glPopMatrix();
 	glPopAttrib();
 	
-	//display cursor
+	/*********************************
+	 * display cursor
+	 *********************************/
+	
+	Frame_IterEnd(frm);
+	cur_line = Frame_IterPrev(frm);
+	len = Line_Length(cur_line);
 	glPushMatrix();
+		//glColor3f(0, 0, 0.8f);
 		glLoadIdentity();
-		glTranslatef((float)x + len*GLYPH_SPACING, (float)y-h*(line-1), 0);
+		glTranslatef((float)x + len*GLYPH_SPACING, (float)y, 0);
 		glMultMatrixf(modelview_matrix);
 		glBegin(GL_LINES);
 			glVertex2i(0, 0);

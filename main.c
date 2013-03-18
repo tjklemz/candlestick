@@ -7,9 +7,6 @@
 
 static const char * const APP_NAME = "Candlestick";
 
-#define WIN_INIT_WIDTH  850
-#define WIN_INIT_HEIGHT 525
-
 static Display * dpy;
 static Window root;
 static GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };

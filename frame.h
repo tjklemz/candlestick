@@ -37,6 +37,12 @@ Frame_InsertTab(Frame * frm);
 void
 Frame_IterBegin(Frame * frm);
 
+void
+Frame_IterEnd(Frame * frm);
+
+Line*
+Frame_IterPrev(Frame * frm);
+
 Line*
 Frame_IterNext(Frame * frm);
 

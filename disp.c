@@ -1,6 +1,7 @@
 #include "disp.h"
 #include "opengl.h"
 #include "fnt.h"
+#include "utils.h"
 
 static int disp_h = 1;
 static int disp_w = 1;
@@ -30,10 +31,11 @@ Disp_Destroy()
 // and Display does not handle input, but only displaying
 void
 Disp_Render(Frame * frm)
-{
+{	
 	//window coords for start of frame
-	float disp_x = (disp_w - (Frame_Length(frm)*Fnt_Size(fnt_reg))) / 2;
-	float disp_y = disp_h - 20;
+	float fnt_size = Fnt_Size(fnt_reg);
+	float disp_x = (disp_w - (Frame_Length(frm)*fnt_size)) / 2;
+	float disp_y = disp_h / 2 + fnt_size;
 	
  	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -42,8 +44,12 @@ Disp_Render(Frame * frm)
 	glColor3f(0.2f, 0.2f, 0.2f);
 
 	glPushMatrix();
+	//PushScreenCoordMat();
 		glLoadIdentity();
+	//	glTranslatef(0, -200, 0);
+		//glMultMatrixf(modelview_matrix);
 		Fnt_Print(fnt_reg, frm, disp_x, disp_y);
+	//PopScreenCoordMat();
 	glPopMatrix();
 }
 

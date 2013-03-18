@@ -26,6 +26,7 @@ SOURCE = \
   fnt.c \
   frame.c \
   dlist.c \
+  utils.c \
   $(NULL)
 
 LDFLAGS = $(NULL)

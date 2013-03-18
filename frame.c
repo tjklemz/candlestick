@@ -277,6 +277,24 @@ Frame_IterBegin(Frame * frm)
 	iter = frm->lines;
 }
 
+void Frame_IterEnd(Frame * frm)
+{
+	iter = frm->cur_line;
+}
+
+Line*
+Frame_IterPrev(Frame * frm)
+{
+	Line * prev = NULL;
+	
+	if(iter) {
+		prev = (Line*)iter->data;
+		iter = iter->prev;
+	}
+	
+	return prev;
+}
+
 Line*
 Frame_IterNext(Frame * frm)
 {

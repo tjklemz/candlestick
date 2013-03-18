@@ -2,6 +2,11 @@
 #include "opengl.h"
 #include "app.h"
 
+/*@interface MyWindow : NSWindow
+{
+}
+@end*/
+
 @interface SysView : NSOpenGLView
 {
 }
@@ -18,6 +23,12 @@
 static int isfullscreen = 0;
 static NSWindow *window;
 static SysView *view;
+
+/*@implementation MyWindow
+
+-(BOOL)
+
+@end*/
 
 @implementation SysView
 
@@ -55,7 +66,7 @@ static SysView *view;
 	App_OnResize(w, h);
 	//[super setNeedsDisplay:YES];
 	//[[self openGLContext] update];
-	puts("reshape");
+	//puts("reshape");
 }
 
 - (void)drawRect:(NSRect)rect
@@ -74,12 +85,12 @@ static SysView *view;
 
 - (void)mouseDown:(NSEvent *)anEvent
 {
-	puts("mousedown!");
+	//puts("mousedown!");
 }
 
 - (void)mouseDragged:(NSEvent *)anEvent
 {
-	puts("mousemoved!");
+	//puts("mousemoved!");
 }
 
 - (void)keyDown:(NSEvent *)anEvent
@@ -88,16 +99,7 @@ static SysView *view;
 	const char * chars = [str UTF8String];
     unsigned char character = chars[0];
 	
-	switch(character) {
-		//esc
-		case 27:
-			puts("ESCAPE!");
-			break;
-		default:
-		NSLog(@"%d", character);
-			App_OnKeyDown(character);
-			break;
-	}
+	App_OnKeyDown(character);
 	
 	[self setNeedsDisplay:YES];
 }
@@ -210,6 +212,22 @@ static SysView *view;
 {
 }
 
+NSRect
+InitialWindowSize()
+{
+	NSRect rect;
+	
+	NSScreen * mainScreen = [NSScreen mainScreen];
+	NSRect mainScreenRect = [mainScreen frame];
+	int x = (mainScreenRect.size.width - WIN_INIT_WIDTH) / 2;
+	int y = (mainScreenRect.size.height - WIN_INIT_HEIGHT) / 2;
+	
+	//should make a call here to a function that returns the sizes (so cross-platform)
+	rect = NSMakeRect(x, y, WIN_INIT_WIDTH, WIN_INIT_HEIGHT);
+	
+	return rect;
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
 	CGRect cgr;
@@ -218,7 +236,8 @@ static SysView *view;
 	[SysDelegate populateMainMenu];
 
 	cgr = CGDisplayBounds(CGMainDisplayID());
-	rect = NSMakeRect(50, 100, 809, 500);
+	
+	rect = InitialWindowSize();
 
 	window = [[NSWindow alloc] initWithContentRect: rect
 		styleMask: NSClosableWindowMask | NSTitledWindowMask |
@@ -226,6 +245,7 @@ static SysView *view;
 		backing: NSBackingStoreBuffered
 		defer: YES
 		screen: [NSScreen mainScreen]];
+	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT)];
 	[window setTitle: [[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];
@@ -239,15 +259,27 @@ static SysView *view;
 
 	// [[NSApp dockTile] setShowsApplicationBadge: YES];
 	// [[NSApp dockTile] display];
+	
+	// This line sets the new Lion fullscreen (that opens a new Space) and adds the icon in the top right
+	//[window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 
-	[window makeKeyAndOrderFront: NULL];
+	[window makeKeyAndOrderFront:nil];
 }
 
 - (void)fullscreen:(NSNotification *)notification
 {
 	if (isfullscreen) {
+		NSRect frame;
+		
 		[view exitFullScreenModeWithOptions:nil];
 		isfullscreen = 0;
+		
+		frame = InitialWindowSize();
+	    [window setFrame:frame display:NO animate:NO];
+		
+		[window makeKeyAndOrderFront:nil];
+		[window setInitialFirstResponder:window.contentView];
+		[window makeFirstResponder:window.contentView];
 	} else {
 		[view enterFullScreenMode:[window screen] withOptions:nil];
 		isfullscreen = 1;
@@ -256,13 +288,13 @@ static SysView *view;
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-	puts("closed!");
+	//puts("closed!");
 	[NSApp stop:self];
 }
 
 - (void)windowDidResize:(NSNotification *)notification
 {
-	puts("resized!");
+	//puts("resized!");
 }
 
 @end

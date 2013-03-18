@@ -8,6 +8,7 @@
 //This class is really an "App Delegate" that simply tells the other
 // classes what to do.
 
+// should put these defines in app.h OR have them loaded from a singleton resource module
 #define FONT_SIZE 18
 #define CHARS_PER_LINE 64
 //static const int FONT_SIZE = 18;

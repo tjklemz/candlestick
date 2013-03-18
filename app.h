@@ -5,6 +5,9 @@
 } KeyCode;
 */
 
+#define WIN_INIT_WIDTH  850
+#define WIN_INIT_HEIGHT 525
+
 void
 App_OnInit();
 
