@@ -40,6 +40,7 @@ Line_SetLength(Line * line, int len)
 	line->len = len;
 }
 
+//should rename to Line_TextRaw or something
 unsigned char*
 Line_Text(Line * line)
 {
@@ -277,7 +278,8 @@ Frame_IterBegin(Frame * frm)
 	iter = frm->lines;
 }
 
-void Frame_IterEnd(Frame * frm)
+void
+Frame_IterEnd(Frame * frm)
 {
 	iter = frm->cur_line;
 }
@@ -305,4 +307,52 @@ Frame_IterNext(Frame * frm)
 		iter = iter->next;
 	}
 	return next;
+}
+
+int
+Frame_IterHasNext(Frame * frm)
+{
+	return (iter && iter->next);
+}
+
+#define BUF_SIZE 4096
+#define EOL_SIZE 1
+#define SOFT_CHAR ' '
+#define HARD_CHAR '\n'
+
+void
+Frame_Write(Frame * frm, FILE * file)
+{
+	char buf[BUF_SIZE];
+	Line * cur_line;
+	int len = 0;
+	int ptr = 0;
+	
+	Frame_IterBegin(frm);
+	
+	while((cur_line = Frame_IterNext(frm))) {
+		len = Line_Length(cur_line);
+		
+		//flush the buffer if it is full (+1 because of EOL character)
+		if(ptr + len + EOL_SIZE >= BUF_SIZE) {
+			fwrite(buf, sizeof(char), ptr, file);
+			ptr = 0;
+		}
+		
+		memcpy(&buf[ptr], Line_Text(cur_line), len * sizeof(char));
+		
+		ptr += len;
+		
+		//put the right character for EOL
+		if(cur_line->end == SOFT && Frame_IterHasNext(frm)) {
+			buf[ptr] = SOFT_CHAR;
+			ptr += EOL_SIZE;
+		} else if(cur_line->end == HARD) {
+			buf[ptr] = HARD_CHAR;
+			ptr += EOL_SIZE;
+		}
+	}
+	
+	//flush the buffer
+	fwrite(buf, sizeof(char), ptr, file);
 }

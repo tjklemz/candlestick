@@ -26,4 +26,7 @@ App_OnKeyDown(unsigned char key);
 void
 App_SaveAs(const char * filename);
 
+void
+App_Save();
+
 #endif

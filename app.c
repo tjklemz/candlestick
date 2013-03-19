@@ -3,7 +3,10 @@
 #include "frame.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 //This class is really an "App Delegate" that simply tells the other
 // classes what to do.
@@ -11,10 +14,9 @@
 // should put these defines in app.h OR have them loaded from a singleton resource module
 #define FONT_SIZE 18
 #define CHARS_PER_LINE 64
-//static const int FONT_SIZE = 18;
-//static const int WIDTH_PTS = 1152;
 
 static Frame * frm = 0;
+static char * _filename = 0;
 
 void
 App_OnInit()
@@ -39,6 +41,7 @@ App_OnInit()
 void
 App_OnDestroy()
 {
+	free(_filename);
 	Disp_Destroy();
 	Frame_Destroy(frm);
 }
@@ -64,9 +67,9 @@ App_OnKeyDown(unsigned char key)
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
-	//fn-delete on mac (actual delete)
+	//actual delete
 	case 239:
-	//delete on mac (actual backspace)
+	//backspace
 	case 127:
 	case '\b':
 		Frame_DeleteCh(frm);
@@ -87,27 +90,34 @@ App_OnKeyDown(unsigned char key)
 	}
 }
 
-void App_SaveAs(const char * filename)
+//The App module should keep track of the File state
+// but delegate to other modules to handle the File
+
+void
+App_SaveAs(const char * filename)
 {
-	Line * cur_line;
-	int len = 0;
 	FILE * file;
+	
 	printf("Saving to file: %s\n", filename);
 	
 	file = fopen(filename, "w");
 	
-	Frame_IterBegin(frm);
-	while((cur_line = Frame_IterNext(frm))) {
-		len = Line_Length(cur_line);
-		if(len == 0) {
-			fputc('\n', file);
-		} else if(len == Frame_Length(frm)) {
-			fputc(' ', file);
-		} else {
-			fwrite(Line_Text(cur_line), 1, Line_Length(cur_line), file);
-		}
-	}
+	Frame_Write(frm, file);
 	
 	fclose(file);
+	
+	printf("...Done.\n");
+	
+	//save the filename
+	free(_filename);
+	_filename = (char *)malloc(strlen(filename) + 1);
+	strcpy(_filename, filename);
 }
 
+void
+App_Save()
+{
+	assert(_filename != 0);
+	
+	App_SaveAs(_filename);
+}

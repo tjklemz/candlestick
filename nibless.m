@@ -93,33 +93,53 @@ static SysView *view;
 	//puts("mousemoved!");
 }
 
+-(void)saveAs
+{
+	NSSavePanel *panel = [NSSavePanel savePanel];
+	[panel setLevel:CGShieldingWindowLevel()];
+	
+	[panel setAllowedFileTypes:[NSArray arrayWithObjects:@"txt", nil]];
+	[panel setCanSelectHiddenExtension:YES];
+	[panel setAllowsOtherFileTypes:YES];
+	[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
+	
+	[panel beginWithCompletionHandler:^(NSInteger returnCode) {
+		if(returnCode == NSFileHandlingPanelOKButton) {
+			const char * filename;
+			[panel orderOut:self];
+			filename = [[[panel URL] path] UTF8String];
+			NSLog(@"Got URL: %s", filename);
+			App_SaveAs(filename);
+		}
+		
+		//NSLog(@"completionHandler called with %d", returnCode);
+	}];
+}
+
+-(void)openFile
+{
+	
+}
+
 - (void)keyDown:(NSEvent *)anEvent
 {
-	NSString * str = [anEvent characters];
-	const char * chars = [str UTF8String];
-    unsigned char character = chars[0];
+	//unsigned char character = [[anEvent characters] UTF8String][0];
+	unsigned char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
+	//unsigned char character = [anEvent keyCode];
 	
 	if(character == 27) {
-		NSSavePanel *panel = [NSSavePanel savePanel];
-		[panel setLevel:CGShieldingWindowLevel()];
-		
-		[panel setAllowedFileTypes:[NSArray arrayWithObjects:@"txt", nil]];
-		[panel setCanSelectHiddenExtension:YES];
-		[panel setAllowsOtherFileTypes:YES];
-		[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
-		
-		[panel beginWithCompletionHandler:^(NSInteger returnCode) {
-			if(returnCode == NSFileHandlingPanelOKButton) {
-				const char * filename;
-				[panel orderOut:self];
-				filename = [[[panel URL] path] UTF8String];
-				NSLog(@"Got URL: %s", filename);
-				App_SaveAs(filename);
-			}
-			
-			//NSLog(@"completionHandler called with %d", returnCode);
-		}];
+		static BOOL saved = NO;
+		if(!saved) {
+			[self saveAs];
+			saved = YES;
+		} else {
+			App_Save();
+		}
+		//[self saveAs];
+		//[self openFile];
 	}
+	
+	//NSLog(@"Char: %d", character);
 	
 	App_OnKeyDown(character);
 	

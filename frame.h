@@ -3,14 +3,24 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+#include <stdio.h>
+
 typedef struct frame Frame;
 typedef struct line_type Line;
+
+/************************************
+ * Line (should be another file?)
+ ************************************/
 
 int
 Line_Length(Line * line);
 
 unsigned char*
 Line_Text(Line * line);
+
+/************************************
+ * Frame Operations
+ ************************************/
 
 //returns number of characters per line
 int
@@ -34,6 +44,10 @@ Frame_InsertNewLine(Frame * frm);
 void
 Frame_InsertTab(Frame * frm);
 
+/************************************
+ * Frame Iterator
+ ************************************/
+
 void
 Frame_IterBegin(Frame * frm);
 
@@ -45,5 +59,12 @@ Frame_IterPrev(Frame * frm);
 
 Line*
 Frame_IterNext(Frame * frm);
+
+/************************************
+ * Frame I/O
+ ************************************/
+
+void
+Frame_Write(Frame * frm, FILE * file);
 
 #endif
