@@ -87,3 +87,27 @@ App_OnKeyDown(unsigned char key)
 	}
 }
 
+void App_SaveAs(const char * filename)
+{
+	Line * cur_line;
+	int len = 0;
+	FILE * file;
+	printf("Saving to file: %s\n", filename);
+	
+	file = fopen(filename, "w");
+	
+	Frame_IterBegin(frm);
+	while((cur_line = Frame_IterNext(frm))) {
+		len = Line_Length(cur_line);
+		if(len == 0) {
+			fputc('\n', file);
+		} else if(len == Frame_Length(frm)) {
+			fputc(' ', file);
+		} else {
+			fwrite(Line_Text(cur_line), 1, Line_Length(cur_line), file);
+		}
+	}
+	
+	fclose(file);
+}
+

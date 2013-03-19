@@ -23,4 +23,7 @@ App_OnRender();
 void
 App_OnKeyDown(unsigned char key);
 
+void
+App_SaveAs(const char * filename);
+
 #endif
