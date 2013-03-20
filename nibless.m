@@ -23,6 +23,7 @@
 static int isfullscreen = 0;
 static NSWindow *window;
 static SysView *view;
+static BOOL hasBeenSaved = NO;
 
 /*@implementation MyWindow
 
@@ -110,6 +111,7 @@ static SysView *view;
 			filename = [[[panel URL] path] UTF8String];
 			NSLog(@"Got URL: %s", filename);
 			App_SaveAs(filename);
+			hasBeenSaved = YES;
 		}
 		
 		[panel release];
@@ -137,6 +139,7 @@ static SysView *view;
 			NSLog(@"Got URL: %s", filename);
 			App_Open(filename);
 			[self setNeedsDisplay:YES];
+			hasBeenSaved = YES;
 	    }
 
 	    [panel release];
@@ -150,20 +153,17 @@ static SysView *view;
 	//unsigned char character = [anEvent keyCode];
 	
 	if(character == 27) {
-		static BOOL saved = NO;
-		if(!saved) {
+		if(!hasBeenSaved) {
 			[self saveAs];
-			saved = YES;
 		} else {
 			App_Save();
 		}
 	} else if(character == '`') {
 		[self openFile];
+	} else {
+		//NSLog(@"Char: %d", character);
+		App_OnKeyDown(character);
 	}
-	
-	//NSLog(@"Char: %d", character);
-	
-	App_OnKeyDown(character);
 	
 	[self setNeedsDisplay:YES];
 }

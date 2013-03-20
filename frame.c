@@ -320,6 +320,14 @@ Frame_IterHasNext(Frame * frm)
 #define SOFT_CHAR ' '
 #define HARD_CHAR '\n'
 
+//The implemenation of this needs to change so that
+// Frame doesn't have to worry about Files. (?) <-- Necessary? Or over-engineering it?
+//It should work just like how Fnt displays the Frame
+// (as far as interfacing with Frame).
+//OR have a method that takes a function pointer OnLine()?
+//The problem really is that Frame does not store the EOL character.
+//Should this change? Then this breaks Fnt.c (display code)
+
 void
 Frame_Write(Frame * frm, FILE * file)
 {
