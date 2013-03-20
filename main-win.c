@@ -6,9 +6,6 @@
 
 static const char * const APP_NAME = "Candlestick";
 
-#define WIN_INIT_WIDTH  809
-#define WIN_INIT_HEIGHT 500
-
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC);
