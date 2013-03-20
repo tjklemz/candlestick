@@ -95,7 +95,7 @@ static SysView *view;
 
 -(void)saveAs
 {
-	NSSavePanel *panel = [NSSavePanel savePanel];
+	NSSavePanel *panel = [[NSSavePanel savePanel] retain];
 	[panel setLevel:CGShieldingWindowLevel()];
 	
 	[panel setAllowedFileTypes:[NSArray arrayWithObjects:@"txt", nil]];
@@ -112,13 +112,35 @@ static SysView *view;
 			App_SaveAs(filename);
 		}
 		
-		//NSLog(@"completionHandler called with %d", returnCode);
+		[panel release];
 	}];
 }
 
 -(void)openFile
 {
-	
+	NSOpenPanel *panel = [[NSOpenPanel openPanel] retain];
+	[panel setLevel:CGShieldingWindowLevel()];
+
+	// Configure your panel the way you want it
+	[panel setCanChooseFiles:YES];
+	[panel setCanChooseDirectories:NO];
+	[panel setAllowsMultipleSelection:NO];
+	[panel setAllowedFileTypes:[NSArray arrayWithObject:@"txt"]];
+	[panel setAllowsOtherFileTypes:YES];
+	[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
+
+	[panel beginWithCompletionHandler:^(NSInteger result){
+	    if (result == NSFileHandlingPanelOKButton) {
+			const char * filename;
+			[panel orderOut:self];
+			filename = [[[panel URL] path] UTF8String];
+			NSLog(@"Got URL: %s", filename);
+			App_Open(filename);
+			[self setNeedsDisplay:YES];
+	    }
+
+	    [panel release];
+	}];
 }
 
 - (void)keyDown:(NSEvent *)anEvent
@@ -135,8 +157,8 @@ static SysView *view;
 		} else {
 			App_Save();
 		}
-		//[self saveAs];
-		//[self openFile];
+	} else if(character == '`') {
+		[self openFile];
 	}
 	
 	//NSLog(@"Char: %d", character);

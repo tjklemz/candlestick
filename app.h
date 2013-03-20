@@ -24,6 +24,9 @@ void
 App_OnKeyDown(unsigned char key);
 
 void
+App_Open(const char * filename);
+
+void
 App_SaveAs(const char * filename);
 
 void

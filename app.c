@@ -61,7 +61,6 @@ App_OnRender()
 void
 App_OnKeyDown(unsigned char key)
 {
-	//char ch[] = {key, '\0'};
 	switch(key)
 	{
 	case '\t':
@@ -85,13 +84,53 @@ App_OnKeyDown(unsigned char key)
 		if(key >= 32) {
 			Frame_InsertCh(frm, key);
 		}
-		//puts(ch);
 		break;
 	}
 }
 
 //The App module should keep track of the File state
-// but delegate to other modules to handle the File
+// but delegate to other modules to handle the File?
+
+static
+void
+App_SaveFilename(const char * filename)
+{
+	free(_filename);
+	_filename = (char *)malloc(strlen(filename) + 1);
+	strcpy(_filename, filename);
+}
+
+static
+void
+App_Read(FILE * file)
+{
+	char c;
+	
+	Frame_Destroy(frm);
+	frm = Frame_Init(CHARS_PER_LINE);
+	
+	while((c = fgetc(file)) != EOF) {
+		App_OnKeyDown(c);
+	}
+}
+
+void
+App_Open(const char * filename)
+{
+	FILE * file;
+	
+	printf("Opening file: %s\n", filename);
+	
+	file = fopen(filename, "r");
+	
+	App_Read(file);
+	
+	fclose(file);
+	
+	printf("...Done.\n");
+	
+	App_SaveFilename(filename);
+}
 
 void
 App_SaveAs(const char * filename)
@@ -108,10 +147,7 @@ App_SaveAs(const char * filename)
 	
 	printf("...Done.\n");
 	
-	//save the filename
-	free(_filename);
-	_filename = (char *)malloc(strlen(filename) + 1);
-	strcpy(_filename, filename);
+	App_SaveFilename(filename);
 }
 
 void
