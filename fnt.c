@@ -256,12 +256,14 @@ Fnt_Destroy(Fnt * fnt)
  * the print function in all its glory; prints using the fnt
  **********************************************************************/
 
+#define LINE_HEIGHT 1.7f
+
 void
 Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 {
 	GLuint flist = fnt->list_base;
 	//make the line height bigger than the fnt so space between lines
-	float h = fnt->height / .63f;
+	float h = fnt->height * LINE_HEIGHT;
 	float modelview_matrix[16];
 	Line * cur_line;
 	int line = 0;

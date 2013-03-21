@@ -312,7 +312,7 @@ Frame_IterNext(Frame * frm)
 int
 Frame_IterHasNext(Frame * frm)
 {
-	return (iter && iter->next);
+	return (iter != NULL);
 }
 
 #define BUF_SIZE 4096

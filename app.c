@@ -11,10 +11,6 @@
 //This class is really an "App Delegate" that simply tells the other
 // classes what to do.
 
-// should put these defines in app.h OR have them loaded from a singleton resource module
-#define FONT_SIZE 18
-#define CHARS_PER_LINE 64
-
 static Frame * frm = 0;
 static char * _filename = 0;
 
@@ -106,6 +102,7 @@ App_Read(FILE * file)
 {
 	char c;
 	
+	//empty the current frame so can fill it
 	Frame_Destroy(frm);
 	frm = Frame_Init(CHARS_PER_LINE);
 	
@@ -156,4 +153,12 @@ App_Save()
 	assert(_filename != 0);
 	
 	App_SaveAs(_filename);
+}
+
+void
+App_Reload()
+{
+	assert(_filename != 0);
+	
+	App_Open(_filename);
 }

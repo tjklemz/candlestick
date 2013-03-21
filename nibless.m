@@ -18,6 +18,7 @@
 +(void)populateMainMenu;
 +(void)populateApplicationMenu:(NSMenu *)aMenu;
 +(void)populateWindowMenu:(NSMenu *)aMenu;
++(void)populateFileMenu:(NSMenu *)aMenu;
 @end
 
 static int isfullscreen = 0;
@@ -94,7 +95,7 @@ static BOOL hasBeenSaved = NO;
 	//puts("mousemoved!");
 }
 
--(void)saveAs
+-(void)saveAs:(NSNotification *)notification
 {
 	NSSavePanel *panel = [[NSSavePanel savePanel] retain];
 	[panel setLevel:CGShieldingWindowLevel()];
@@ -116,9 +117,22 @@ static BOOL hasBeenSaved = NO;
 		
 		[panel release];
 	}];
+	
+	[self setNeedsDisplay:YES];
 }
 
--(void)openFile
+-(void)save:(NSNotification *)notification
+{
+	if(!hasBeenSaved) {
+		[self saveAs:notification];
+	} else {
+		App_Save();
+	}
+	
+	[self setNeedsDisplay:YES];
+}
+
+-(void)open:(NSNotification *)notification
 {
 	NSOpenPanel *panel = [[NSOpenPanel openPanel] retain];
 	[panel setLevel:CGShieldingWindowLevel()];
@@ -146,24 +160,25 @@ static BOOL hasBeenSaved = NO;
 	}];
 }
 
+-(void)reload:(NSNotification *)notification
+{
+	if(!hasBeenSaved) {
+		[self open:notification];
+	} else {
+		App_Reload();
+	}
+	
+	[self setNeedsDisplay:YES];
+}
+
 - (void)keyDown:(NSEvent *)anEvent
 {
 	//unsigned char character = [[anEvent characters] UTF8String][0];
 	unsigned char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
 	//unsigned char character = [anEvent keyCode];
-	
-	if(character == 27) {
-		if(!hasBeenSaved) {
-			[self saveAs];
-		} else {
-			App_Save();
-		}
-	} else if(character == '`') {
-		[self openFile];
-	} else {
-		//NSLog(@"Char: %d", character);
-		App_OnKeyDown(character);
-	}
+
+	//NSLog(@"Char: %d", character);
+	App_OnKeyDown(character);
 	
 	[self setNeedsDisplay:YES];
 }
@@ -182,6 +197,11 @@ static BOOL hasBeenSaved = NO;
 	submenu = [[NSMenu alloc] initWithTitle:@"Apple"];
 	[NSApp performSelector:@selector(setAppleMenu:) withObject:submenu];
 	[self populateApplicationMenu:submenu];
+	[mainMenu setSubmenu:submenu forItem:menuItem];
+	
+	menuItem = [mainMenu addItemWithTitle:@"File" action:NULL keyEquivalent:@""];
+	submenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"File", @"The File menu")];
+	[self populateFileMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
 
 	menuItem = [mainMenu addItemWithTitle:@"Window" action:NULL keyEquivalent:@""];
@@ -270,6 +290,35 @@ static BOOL hasBeenSaved = NO;
 	[menuItem setTarget:[NSApp delegate]];
 
 	[aMenu addItem:[NSMenuItem separatorItem]];
+}
+
++(void)populateFileMenu:(NSMenu *)aMenu
+{
+	NSMenuItem *menuItem;
+	
+	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Reload", nil)
+		action:@selector(reload:)
+		keyEquivalent:@"r"];
+	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+	[menuItem setTarget:view];
+	
+	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Open...", nil)
+		action:@selector(open:)
+		keyEquivalent:@"o"];
+	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+	[menuItem setTarget:view];
+	
+	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Save", nil)
+		action:@selector(save:)
+		keyEquivalent:@"s"];
+	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+	[menuItem setTarget:view];
+
+	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Save As...", nil)
+		action:@selector(saveAs:)
+		keyEquivalent:@"S"];
+	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+	[menuItem setTarget:view];
 }
 
 - (void) applicationWillFinishLaunching: (NSNotification *)notification
