@@ -11,6 +11,8 @@ else
 endif
 
 LIBDIR = ./lib/$(PLAT)
+OUTDIR = package/$(PLAT)
+MACAPP = package/mac/$(BINARY).app
 
 CC = gcc -Wall -O2
 
@@ -30,9 +32,6 @@ COMMON_SRC = \
   $(NULL)
 
 COMMON_LIBS = -lm
-OS_LIBS = $(NULL)
-GL_LIBS = $(NULL)
-FT_LIBS = $(NULL)
 
 ifeq ($(PLAT),win)
 	OS_LIBS += -luser32 -lgdi32
@@ -57,6 +56,11 @@ CFLAGS = -I./freetype/ -I./freetype/freetype2
 
 all:
 	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
+
+package: all
+	@cp $(BINARY) $(MACAPP)/Contents/MacOS
+	@cp -r font $(MACAPP)/Contents/MacOS
+	@echo Packaged $(BINARY)
 
 clean:
 	@echo Cleaning up...
