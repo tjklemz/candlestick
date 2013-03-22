@@ -288,7 +288,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 	glPushMatrix();
 	
 	Frame_IterEnd(frm);
-	while((cur_line = Frame_IterPrev(frm))) {
+	while(line < 60 && (cur_line = Frame_IterPrev(frm))) {
 		len = Line_Length(cur_line);
 		glLoadIdentity();
 		glTranslatef((float)x, (float)y + h*line, 0);
