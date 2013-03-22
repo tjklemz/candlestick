@@ -1,68 +1,30 @@
+TOPDIR = .
 
-ifeq ($(OS),Windows_NT)
-	PLAT = win
-else
-	UNAME = $(shell uname)
-	PLAT = nix
-	
-	ifeq ($(UNAME),Darwin)
-		PLAT = mac
-	endif
-endif
+include $(TOPDIR)/config
 
-LIBDIR = ./lib/$(PLAT)
-OUTDIR = package/$(PLAT)
-MACAPP = package/mac/$(BINARY).app
-
-CC = gcc -Wall -O2
-
-ifdef DEBUG
-	CC += -g
-endif
-
-BINARY = candlestick
-
-COMMON_SRC = \
-  app.c \
-  disp.c \
-  fnt.c \
-  frame.c \
-  dlist.c \
-  utils.c \
-  $(NULL)
-
-COMMON_LIBS = -lm
-
-ifeq ($(PLAT),win)
-	OS_LIBS += -luser32 -lgdi32
-	GL_LIBS += -lopengl32 -lglu32
-	FT_LIBS += $(LIBDIR)/freetype.lib
-	MAIN_SRC = main-win.c
-else ifeq ($(PLAT),mac)
-	OS_LIBS	+= -framework Cocoa
-	GL_LIBS += -framework OpenGL
-	FT_LIBS += $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
-	MAIN_SRC = nibless.m
-else ifeq ($(PLAT),nix)
-	OS_LIBS += -lX11
-	GL_LIBS += -lGL -lGLU
-	FT_LIBS += $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a
-	MAIN_SRC = main-nix.c
-endif
-
-SOURCE = $(COMMON_SRC) $(MAIN_SRC)
-LDFLAGS = $(COMMON_LIBS) $(OS_LIBS) $(GL_LIBS) $(FT_LIBS)
-CFLAGS = -I./freetype/ -I./freetype/freetype2
+SRCDIR = src
 
 all:
-	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
+	@echo "\nCompiling sources in '$(SRCDIR)'...\n"
+	@cd $(SRCDIR) && $(MAKE)
+	@echo "\n...Done building."
 
 package: all
+	@echo "\nPackaging $(BINARY)..."
+	@mkdir -p $(MACAPP)/Contents
+	@cp $(RESDIR)/mac/Info.plist $(MACAPP)/Contents
+	@mkdir -p $(MACAPP)/Contents/MacOS
+	@cp $(RESDIR)/mac/$(BINARY).sh $(MACAPP)/Contents/MacOS
 	@cp $(BINARY) $(MACAPP)/Contents/MacOS
-	@cp -r font $(MACAPP)/Contents/MacOS
-	@echo Packaged $(BINARY)
+	@cp -r $(RESDIR)/common/font $(MACAPP)/Contents/MacOS
+	@echo "Packaged $(BINARY) into $(MACAPP)\n"
+	
+run: package
+	@echo "Running $(BINARY)..."
+	open $(MACAPP)
 
 clean:
 	@echo Cleaning up...
 	@rm $(BINARY)
+	@rm -r $(MACAPP)
 	@echo Done.

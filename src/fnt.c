@@ -256,7 +256,7 @@ Fnt_Destroy(Fnt * fnt)
  * the print function in all its glory; prints using the fnt
  **********************************************************************/
 
-#define LINE_HEIGHT 1.7f
+#define LINE_HEIGHT 1.8f
 
 void
 Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)

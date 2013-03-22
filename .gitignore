@@ -10,7 +10,7 @@ ehthumbs.db
 candlestick
 *.vcxproj
 *.vcxproj*
-out/**/*
+package/**/*
 *.pdb
 *.cache
 *.suo

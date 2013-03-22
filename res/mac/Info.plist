@@ -27,7 +27,7 @@
 	</array>
 	
 	<key>CFBundleExecutable</key>
-	<string>cs.sh</string>
+	<string>candlestick.sh</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.koalasoft.candlestick</string>
 	<key>CFBundleName</key>

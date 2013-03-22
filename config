@@ -1,0 +1,16 @@
+BINARY = candlestick
+
+ifeq ($(OS),Windows_NT)
+	PLAT = win32
+else
+	UNAME = $(shell uname)
+	PLAT = nix
+	
+	ifeq ($(UNAME),Darwin)
+		PLAT = mac
+	endif
+endif
+
+LIBDIR = $(TOPDIR)/lib/$(PLAT)
+RESDIR = $(TOPDIR)/res
+MACAPP = $(TOPDIR)/package/$(BINARY).app

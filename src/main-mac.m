@@ -19,6 +19,7 @@
 +(void)populateApplicationMenu:(NSMenu *)aMenu;
 +(void)populateWindowMenu:(NSMenu *)aMenu;
 +(void)populateFileMenu:(NSMenu *)aMenu;
+-(void)bringTextToFocus;
 @end
 
 static int isfullscreen = 0;
@@ -155,6 +156,8 @@ static BOOL hasBeenSaved = NO;
 			[self setNeedsDisplay:YES];
 			hasBeenSaved = YES;
 	    }
+		
+		[[NSApp delegate] bringTextToFocus];
 
 	    [panel release];
 	}];
@@ -379,6 +382,13 @@ InitialWindowSize()
 	[window makeKeyAndOrderFront:nil];
 }
 
+-(void)bringTextToFocus
+{
+	[window makeKeyAndOrderFront:nil];
+	[window setInitialFirstResponder:window.contentView];
+	[window makeFirstResponder:window.contentView];
+}
+
 - (void)fullscreen:(NSNotification *)notification
 {
 	if (isfullscreen) {
@@ -390,9 +400,7 @@ InitialWindowSize()
 		frame = InitialWindowSize();
 	    [window setFrame:frame display:NO animate:NO];
 		
-		[window makeKeyAndOrderFront:nil];
-		[window setInitialFirstResponder:window.contentView];
-		[window makeFirstResponder:window.contentView];
+		[self bringTextToFocus];
 	} else {
 		[view enterFullScreenMode:[window screen] withOptions:nil];
 		isfullscreen = 1;
