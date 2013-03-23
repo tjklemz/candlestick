@@ -17,7 +17,6 @@
 
 struct fnt_data {
 	float height;		//in points
-	float width;
 	GLuint * textures;	//list of textures
 	GLuint list_base;	//beginning texture id
 };
@@ -135,10 +134,6 @@ Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, unsigned char ch, GLuint list_base,
 	bitmap_glyph = (FT_BitmapGlyph)glyph;
 	bitmap = &bitmap_glyph->bitmap;
 	
-	if(bitmap->width > fnt->width) {
-		fnt->width = bitmap->width;
-	}
-	
 	Fnt_MakeGlyphTexture(bitmap, textureID, listID);
 	
 	glNewList(listID, GL_COMPILE);
@@ -176,6 +171,8 @@ Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, unsigned char ch, GLuint list_base,
 		glTranslatef(GLYPH_SPACING, 0, 0);
 
 	glEndList();
+	
+	FT_Done_Glyph(glyph);
 }
 
 
@@ -196,7 +193,6 @@ Fnt_Init(const char * fname, unsigned int height)
 	
 	fnt->textures = (GLuint *)malloc(sizeof(GLuint) * NUM_CHARS);
 	fnt->height = (float)height;
-	fnt->width = 0;
 
 	if (FT_Init_FreeType(&library)) { 
 		printf("FT_Init_FreeType failed. Something's wrong with FreeType");

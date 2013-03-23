@@ -135,6 +135,15 @@ Frame_Init(int line_len)
 void
 Frame_Destroy(Frame * frm)
 {
+	Line * line = NULL;
+	Node * travel = frm->lines;
+	
+	while(travel) {
+		line = (Line *)travel->data;
+		Line_Destroy(line);
+		travel = travel->next;
+	}
+	
 	Node_Destroy(frm->lines);
 	frm->cur_line = NULL;
 	free(frm);

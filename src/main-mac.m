@@ -192,23 +192,23 @@ static BOOL hasBeenSaved = NO;
 
 +(void)populateMainMenu
 {
-	NSMenu *mainMenu = [[NSMenu alloc] initWithTitle:@"MainMenu"];
+	NSMenu *mainMenu = [[[NSMenu alloc] initWithTitle:@"MainMenu"] autorelease];
 	NSMenuItem *menuItem;
 	NSMenu *submenu;
 
 	menuItem = [mainMenu addItemWithTitle:@"Apple" action:NULL keyEquivalent:@""];
-	submenu = [[NSMenu alloc] initWithTitle:@"Apple"];
+	submenu = [[[NSMenu alloc] initWithTitle:@"Apple"] autorelease];
 	[NSApp performSelector:@selector(setAppleMenu:) withObject:submenu];
 	[self populateApplicationMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
 	
 	menuItem = [mainMenu addItemWithTitle:@"File" action:NULL keyEquivalent:@""];
-	submenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"File", @"The File menu")];
+	submenu = [[[NSMenu alloc] initWithTitle:NSLocalizedString(@"File", @"The File menu")] autorelease];
 	[self populateFileMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
 
 	menuItem = [mainMenu addItemWithTitle:@"Window" action:NULL keyEquivalent:@""];
-	submenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"Window", @"The Window menu")];
+	submenu = [[[NSMenu alloc] initWithTitle:NSLocalizedString(@"Window", @"The Window menu")] autorelease];
 	[self populateWindowMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
 	[NSApp setWindowsMenu:submenu];
@@ -380,6 +380,13 @@ InitialWindowSize()
 	//[window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 
 	[window makeKeyAndOrderFront:nil];
+}
+
+-(void)applicationWillTerminate:(NSNotification *)notification
+{
+	App_OnDestroy();
+	[window release];
+	NSLog(@"Terminating...");
 }
 
 -(void)bringTextToFocus

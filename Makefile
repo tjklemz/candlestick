@@ -13,7 +13,12 @@
 BINARY = candlestick
 ARCHIVE = candlestick.tar.bz2
 
-CC = gcc -Wall -O2
+# Recommend gcc or anything compatible (such as Clang).
+# Clang will compile much faster on the Mac,
+#  since this program links to Cocoa.
+# On Windows and Linux, the compile time is almost
+#  negligible.
+CC = cc -Wall -O2
 
 ifdef DEBUG
 	CC += -g
