@@ -73,7 +73,7 @@ CFLAGS = $(FREETYPE_INC)
 .PHONY: all
 all: $(BINARY)
 
-$(BINARY):
+$(BINARY): $(SOURCE)
 	@echo "\nCompiling sources in '$(SRCDIR)'...\n"
 	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
 	@echo "\n...Done building."

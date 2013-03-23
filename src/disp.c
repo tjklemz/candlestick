@@ -14,7 +14,7 @@ Disp_Init(int fnt_size)
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size);
 
 	glShadeModel(GL_SMOOTH);
-    glClearColor(1.0f, 1.0f, 0.97f, 0.0f);
+    glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
     glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -41,7 +41,7 @@ Disp_Render(Frame * frm)
 	glLoadIdentity();
 	glTranslatef(0.0f, 0.0f, -1.0f);
 
-	glColor3f(0.2f, 0.2f, 0.2f);
+	glColor3ub(50, 31, 20);
 
 	glPushMatrix();
 	//PushScreenCoordMat();

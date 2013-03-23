@@ -308,7 +308,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 	cur_line = Frame_IterPrev(frm);
 	len = Line_Length(cur_line);
 	glPushMatrix();
-		//glColor3f(0, 0, 0.8f);
+		//glColor3f(0.2f, 0.2f, 0.2f);
 		glLoadIdentity();
 		glTranslatef((float)x + len*GLYPH_SPACING, (float)y, 0);
 		glMultMatrixf(modelview_matrix);
