@@ -7,14 +7,12 @@ ehthumbs.db
 *.obj
 *.o
 *~
-*.dll
 *.exe
 candlestick
 *.vcxproj
 *.vcxproj*
-out/**/*
+package
+package/**/*
 *.pdb
-*.dll
 *.cache
 *.suo
-freetype/**/*
