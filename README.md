@@ -9,8 +9,8 @@ mimicking the pure compositional bliss of the age-old typewriter.
 
 ## Features
 * Runs on Windows, Mac, and Linux. (Each native.)
-* Fast and lightweight!
 * Minimalist design lets you focus on writing.
+* Fast and lightweight.
 * Saves files as pure text (.txt) using a subset of UTF-8.
 * "Portable." The app is self-contained and can run from a flash drive.
 * Free Software (libre). Fully GPL'd so you keep your freedom. (See "License.")
