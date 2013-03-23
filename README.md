@@ -1,7 +1,5 @@
-Candlestick App
-===============
-
-## "Just write."
+Candlestick App — "Just write."
+===============================
 
 Candlestick is a minimalist, cross-platform writing app that lets you 
 focus on the text.
@@ -65,7 +63,23 @@ experience is the same regardless of the computer platform.
 ## Technology
 
 Candlestick is written in C and uses OpenGL and Freetype 2 so there
-is no reliance on the system's user-interface.
+is no reliance on the system's user-interface. All platform specific
+code is handled natively: on Mac, Cocoa; on Windows, Win32; on Linux, X11.
+
+## Compiling
+
+The build system uses GNU Make. Typing `make package` will build, package
+and archive the app for the platform you are on.
+
+Other options for `make`:
+* `make` — Compiles the code
+* `make package` — Compiles, packages, and archives the app (platform dependent)
+* `make run` — Does all the above and runs the app
+
+After packaging/archiving, the app will be available to in the newly created
+"package" directory. There is no installer; simply copy the contents of this 
+folder to wherever you want on the computer. There are no outside dependencies, 
+as the app is self-contained.
 
 ## License
 
