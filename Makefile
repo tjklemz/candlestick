@@ -1,4 +1,17 @@
+###########################################################
+#
+# Makefile for candlestick app
+#
+# Copyright 2013 Thomas Klemz
+#
+# Licensed under GPLv3 or later at your choice.
+# You are free to use, distribute, and modify this
+# as long as you grant the same freedoms to others.
+# See the file COPYING for the full license.
+###########################################################
+
 BINARY = candlestick
+ARCHIVE = candlestick.tar.bz2
 
 CC = gcc -Wall -O2
 
@@ -65,22 +78,27 @@ $(BINARY):
 	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
 	@echo "\n...Done building."
 
-.PHONY: package
-package: $(BINARY) $(RESDIR)/mac/* $(RESDIR)/common/*
+.PHONY: package-mac
+package-mac: $(BINARY) $(RESDIR)/mac/* $(RESDIR)/common/*
 	@echo "\nPackaging $(BINARY)..."
-	@cp -r $(RESDIR)/mac/$(MACAPP) $(OUTDIR)
-	@cp $(BINARY) $(OUTDIR)/$(MACAPP)/Contents/MacOS
-	@cp -r $(RESDIR)/common/font $(OUTDIR)/$(MACAPP)/Contents/MacOS
-	@echo "Packaged $(BINARY) into $(OUTDIR)/$(MACAPP)\n"
+	@mkdir -p $(OUTDIR)
+	@cp -Ra $(RESDIR)/mac/$(MACAPP) $(OUTDIR)
+	@cp -a $(BINARY) $(OUTDIR)/$(MACAPP)/Contents/MacOS
+	@cp -Ra $(RESDIR)/common/font $(OUTDIR)/$(MACAPP)/Contents/MacOS
+	@tar -cjf $(OUTDIR)/$(ARCHIVE) $(OUTDIR)/$(MACAPP)
+	@echo "Packaged $(BINARY) into $(OUTDIR)/$(MACAPP)\nArchived into $(OUTDIR)/$(ARCHIVE)"
+
+.PHONY: package
+package: package-$(PLAT)
 
 .PHONY: run
 run: package
 	@echo "Running $(BINARY)..."
-	open $(OUTDIR)/$(MACAPP)
+	@open $(OUTDIR)/$(MACAPP)
 
 .PHONY: clean
 clean:
 	@echo Cleaning up...
 	-@rm $(BINARY) 2> /dev/null || echo "There was no binary..."
-	-@rm -r $(OUTDIR)/$(MACAPP) 2> /dev/null || echo "There was no app..."
+	-@rm -r $(OUTDIR) 2> /dev/null || echo "There was no archive..."
 	@echo Done.
