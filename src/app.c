@@ -77,8 +77,9 @@ App_OnRender()
 void
 App_OnKeyDown(unsigned char key)
 {
-	switch(key)
-	{
+	Disp_ScrollReset();
+	
+	switch(key) {
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
@@ -102,6 +103,16 @@ App_OnKeyDown(unsigned char key)
 		}
 		break;
 	}
+}
+
+void App_ScrollUp()
+{
+	Disp_ScrollUp();
+}
+
+void App_ScrollDown()
+{
+	Disp_ScrollDown();
 }
 
 //The App module should keep track of the File state

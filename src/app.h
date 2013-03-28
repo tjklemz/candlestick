@@ -49,6 +49,12 @@ void
 App_OnKeyDown(unsigned char key);
 
 void
+App_ScrollUp();
+
+void
+App_ScrollDown();
+
+void
 App_Open(const char * filename);
 
 void

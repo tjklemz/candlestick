@@ -23,6 +23,7 @@
 #include "fnt.h"
 #include "utils.h"
 
+static int scroll = 0;
 static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
@@ -31,6 +32,8 @@ static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 void
 Disp_Init(int fnt_size)
 {
+	scroll = 0;
+	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size);
 
 	glShadeModel(GL_SMOOTH);
@@ -55,7 +58,7 @@ Disp_Render(Frame * frm)
 	//window coords for start of frame
 	float fnt_size = Fnt_Size(fnt_reg);
 	float disp_x = (disp_w - (Frame_Length(frm)*fnt_size)) / 2;
-	float disp_y = disp_h / 2 + fnt_size;
+	float disp_y = disp_h / 2 + fnt_size * (1 - scroll);
 	
  	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -68,7 +71,7 @@ Disp_Render(Frame * frm)
 		glLoadIdentity();
 	//	glTranslatef(0, -200, 0);
 		//glMultMatrixf(modelview_matrix);
-		Fnt_Print(fnt_reg, frm, disp_x, disp_y);
+		Fnt_Print(fnt_reg, frm, disp_x, disp_y, 100 + scroll);
 	//PopScreenCoordMat();
 	glPopMatrix();
 }
@@ -95,4 +98,28 @@ Disp_Resize(int w, int h)
     gluPerspective(45.0f, ratio, 0.1f, 100.0f);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+}
+
+// How about pass in the Frame and have Display set the begin and end?
+// (since must know about the screen size, etc)
+// Like a scroll module, almost.
+
+void
+Disp_ScrollUp()
+{
+	++scroll;
+}
+
+void
+Disp_ScrollDown()
+{
+	if(scroll > 0) {
+		--scroll;
+	}
+}
+
+void
+Disp_ScrollReset()
+{
+	scroll = 0;
 }

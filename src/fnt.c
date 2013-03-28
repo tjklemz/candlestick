@@ -267,7 +267,7 @@ Fnt_Destroy(Fnt * fnt)
 #define LINE_HEIGHT 1.8f
 
 void
-Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
+Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
 {
 	GLuint flist = fnt->list_base;
 	//make the line height bigger than the fnt so space between lines
@@ -296,7 +296,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y)
 	glPushMatrix();
 	
 	Frame_IterEnd(frm);
-	while(line < 60 && (cur_line = Frame_IterPrev(frm))) {
+	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
 		len = Line_Length(cur_line);
 		glLoadIdentity();
 		glTranslatef((float)x, (float)y + h*line, 0);

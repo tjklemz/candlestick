@@ -195,14 +195,31 @@ static BOOL hasBeenSaved = NO;
 	[self setNeedsDisplay:YES];
 }
 
-- (void)keyDown:(NSEvent *)anEvent
-{
-	//unsigned char character = [[anEvent characters] UTF8String][0];
-	unsigned char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
-	//unsigned char character = [anEvent keyCode];
+#define UP_ARROW    126
+#define DOWN_ARROW  125
+#define RIGHT_ARROW 124
+#define LEFT_ARROW  123
 
-	//NSLog(@"Char: %d", character);
-	App_OnKeyDown(character);
+- (void)keyDown:(NSEvent *)anEvent
+{	
+	switch([anEvent keyCode]) {
+	case UP_ARROW:
+		App_ScrollUp();
+	    break;
+	case DOWN_ARROW:
+		App_ScrollDown();
+		break;
+	default:
+		{
+			//unsigned char character = [[anEvent characters] UTF8String][0];
+			unsigned char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
+			//unsigned char character = [anEvent keyCode];
+			
+			//NSLog(@"Char: %d", character);
+			App_OnKeyDown(character);
+		}
+	    break;
+	}
 	
 	[self setNeedsDisplay:YES];
 }

@@ -35,4 +35,13 @@ Disp_Render(Frame * frm);
 void
 Disp_Resize(int w, int h);
 
+void
+Disp_ScrollUp();
+
+void
+Disp_ScrollDown();
+
+void
+Disp_ScrollReset();
+
 #endif
