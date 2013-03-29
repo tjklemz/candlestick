@@ -25,14 +25,8 @@
 
 #import <QuartzCore/CVDisplayLink.h>
 
-/*@interface MyWindow : NSWindow
-{
-}
-@end*/
-
 @interface SysView : NSOpenGLView
 {
-	CVDisplayLinkRef displayLink; //display link for managing rendering thread
 }
 @end
 
@@ -50,36 +44,17 @@ static int isfullscreen = 0;
 static NSWindow *window;
 static SysView *view;
 static BOOL hasBeenSaved = NO;
-
-/*@implementation MyWindow
-
--(BOOL)
-
-@end*/
+static NSTimer * renderTimer;
 
 @implementation SysView
  
-- (CVReturn)getFrameForTime:(const CVTimeStamp*)outputTime
+// Timer callback method
+- (void)timerFired:(id)sender
 {
-    // Add your drawing codes here
-	[super setNeedsDisplay:YES];
- 
-    return kCVReturnSuccess;
-}
-
-// This is the renderer output callback function
-static CVReturn MyDisplayLinkCallback(CVDisplayLinkRef displayLink, const CVTimeStamp* now, const CVTimeStamp* outputTime, CVOptionFlags flagsIn, CVOptionFlags* flagsOut, void* displayLinkContext)
-{
-    CVReturn result = [(SysView*)displayLinkContext getFrameForTime:outputTime];
-    return result;
-}
- 
-- (void)dealloc
-{
-    // Release the display link
-    CVDisplayLinkRelease(displayLink);
- 
-    [super dealloc];
+    // It is good practice in a Cocoa application to allow the system to send the -drawRect:
+    // message when it needs to draw, and not to invoke it directly from the timer.
+    // All we do here is tell the display it needs a refresh
+    [self setNeedsDisplay:YES];
 }
 
 - (id)initWithFrame:(NSRect)frameRect
@@ -96,6 +71,17 @@ static CVReturn MyDisplayLinkCallback(CVDisplayLinkRef displayLink, const CVTime
 	
     self = [super initWithFrame:frameRect pixelFormat:nsglFormat];
 	
+	renderTimer = [NSTimer timerWithTimeInterval:0.001   //a 1ms time interval
+	                                target:self
+	                                selector:@selector(timerFired:)
+	                                userInfo:nil
+	                                repeats:YES];
+ 
+    [[NSRunLoop currentRunLoop] addTimer:renderTimer
+                                forMode:NSDefaultRunLoopMode];
+    [[NSRunLoop currentRunLoop] addTimer:renderTimer
+                                forMode:NSEventTrackingRunLoopMode]; //Ensure timer fires during resize
+	
 	return self;
 }
 
@@ -104,20 +90,6 @@ static CVReturn MyDisplayLinkCallback(CVDisplayLinkRef displayLink, const CVTime
 	// Synchronize buffer swaps with vertical refresh rate
     GLint swapInt = 1;
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
-	
-    // Create a display link capable of being used with all active displays
-    CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
- 
-    // Set the renderer output callback function
-    CVDisplayLinkSetOutputCallback(displayLink, &MyDisplayLinkCallback, self);
- 
-    // Set the display link for the current renderer
-    CGLContextObj cglContext = [[self openGLContext] CGLContextObj];
-    CGLPixelFormatObj cglPixelFormat = [[self pixelFormat] CGLPixelFormatObj];
-    CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(displayLink, cglContext, cglPixelFormat);
- 
-    // Activate the display link
-    CVDisplayLinkStart(displayLink);
 	
 	App_OnInit();
 }
