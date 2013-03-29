@@ -40,9 +40,14 @@ typedef struct fnt_data Fnt;
 float Fnt_Size(Fnt * fnt);
 
 /**********************************************************************
+ * returns the line height
+ **********************************************************************/
+float Fnt_LineHeight(Fnt * fnt);
+
+/**********************************************************************
  * creates a fnt with a given name and height (in points)
  **********************************************************************/
-Fnt * Fnt_Init(const char * fname, unsigned int height);
+Fnt * Fnt_Init(const char * fname, unsigned int height, float line_height);
 
 /**********************************************************************
  * destroys the fnt (destructor)

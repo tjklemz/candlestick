@@ -29,6 +29,7 @@
 
 struct fnt_data {
 	float height;		//in points
+	float line_height;
 	GLuint * textures;	//list of textures
 	GLuint list_base;	//beginning texture id
 };
@@ -37,6 +38,11 @@ float
 Fnt_Size(Fnt * fnt)
 {
 	return GLYPH_SPACING;// + 1 / GLYPH_SPACING;
+}
+
+float Fnt_LineHeight(Fnt * fnt)
+{
+	return fnt->line_height;
 }
 
 
@@ -195,7 +201,7 @@ Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, unsigned char ch, GLuint list_base,
  **********************************************************************/
 
 Fnt* 
-Fnt_Init(const char * fname, unsigned int height) 
+Fnt_Init(const char * fname, unsigned int height, float line_height) 
 {
 	FT_Library library;
 	FT_Face face;
@@ -205,6 +211,7 @@ Fnt_Init(const char * fname, unsigned int height)
 	
 	fnt->textures = (GLuint *)malloc(sizeof(GLuint) * NUM_CHARS);
 	fnt->height = (float)height;
+	fnt->line_height = (float)fnt->height * line_height;
 
 	if (FT_Init_FreeType(&library)) { 
 		printf("FT_Init_FreeType failed. Something's wrong with FreeType");
@@ -264,14 +271,11 @@ Fnt_Destroy(Fnt * fnt)
  * the print function in all its glory; prints using the fnt
  **********************************************************************/
 
-#define LINE_HEIGHT 1.8f
-
 void
 Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
 {
 	GLuint flist = fnt->list_base;
-	//make the line height bigger than the fnt so space between lines
-	float h = fnt->height * LINE_HEIGHT;
+	float h = fnt->line_height;
 	float modelview_matrix[16];
 	Line * cur_line;
 	int line = 0;

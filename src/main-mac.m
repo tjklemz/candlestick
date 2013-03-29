@@ -23,6 +23,8 @@
 #include "opengl.h"
 #include "app.h"
 
+#import <QuartzCore/CVDisplayLink.h>
+
 /*@interface MyWindow : NSWindow
 {
 }
@@ -30,6 +32,7 @@
 
 @interface SysView : NSOpenGLView
 {
+	CVDisplayLinkRef displayLink; //display link for managing rendering thread
 }
 @end
 
@@ -55,6 +58,29 @@ static BOOL hasBeenSaved = NO;
 @end*/
 
 @implementation SysView
+ 
+- (CVReturn)getFrameForTime:(const CVTimeStamp*)outputTime
+{
+    // Add your drawing codes here
+	[super setNeedsDisplay:YES];
+ 
+    return kCVReturnSuccess;
+}
+
+// This is the renderer output callback function
+static CVReturn MyDisplayLinkCallback(CVDisplayLinkRef displayLink, const CVTimeStamp* now, const CVTimeStamp* outputTime, CVOptionFlags flagsIn, CVOptionFlags* flagsOut, void* displayLinkContext)
+{
+    CVReturn result = [(SysView*)displayLinkContext getFrameForTime:outputTime];
+    return result;
+}
+ 
+- (void)dealloc
+{
+    // Release the display link
+    CVDisplayLinkRelease(displayLink);
+ 
+    [super dealloc];
+}
 
 - (id)initWithFrame:(NSRect)frameRect
 {
@@ -79,6 +105,20 @@ static BOOL hasBeenSaved = NO;
     GLint swapInt = 1;
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 	
+    // Create a display link capable of being used with all active displays
+    CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
+ 
+    // Set the renderer output callback function
+    CVDisplayLinkSetOutputCallback(displayLink, &MyDisplayLinkCallback, self);
+ 
+    // Set the display link for the current renderer
+    CGLContextObj cglContext = [[self openGLContext] CGLContextObj];
+    CGLPixelFormatObj cglPixelFormat = [[self pixelFormat] CGLPixelFormatObj];
+    CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(displayLink, cglContext, cglPixelFormat);
+ 
+    // Activate the display link
+    CVDisplayLinkStart(displayLink);
+	
 	App_OnInit();
 }
 
@@ -95,9 +135,7 @@ static BOOL hasBeenSaved = NO;
 
 - (void)drawRect:(NSRect)rect
 {
-	//App_OnResize(rect.size.width, rect.size.height);
 	App_OnRender();
-	
 	//swaps the buffers (double buffering) and calls glFlush()
 	[[self openGLContext] flushBuffer];
 }
@@ -399,7 +437,7 @@ InitialWindowSize()
 		backing: NSBackingStoreBuffered
 		defer: YES
 		screen: [NSScreen mainScreen]];
-	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT)];
+	//[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT)];
 	[window setTitle: [[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];

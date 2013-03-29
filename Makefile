@@ -60,7 +60,7 @@ ifeq ($(PLAT),win32)
 	FT_LIBS = $(LIBDIR)/freetype.lib
 	MAIN_SRC = main-win32.c
 else ifeq ($(PLAT),mac)
-	OS_LIBS	= -framework Cocoa
+	OS_LIBS	= -framework Cocoa -framework QuartzCore
 	GL_LIBS = -framework OpenGL
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
 	MAIN_SRC = main-mac.m
