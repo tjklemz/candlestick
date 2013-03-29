@@ -36,10 +36,13 @@ void
 Disp_Resize(int w, int h);
 
 void
-Disp_ScrollUp();
+Disp_ScrollUpRequested();
 
 void
-Disp_ScrollDown();
+Disp_ScrollDownRequested();
+
+void
+Disp_ScrollStopRequested();
 
 void
 Disp_ScrollReset();

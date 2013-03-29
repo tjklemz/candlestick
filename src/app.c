@@ -75,10 +75,37 @@ App_OnRender()
 }
 
 void
-App_OnKeyDown(unsigned char key)
+App_OnSpecialKeyUp(cs_key_t key)
 {
-	Disp_ScrollReset();
-	
+	switch(key) {
+	case CS_ARROW_UP:
+	case CS_ARROW_DOWN:
+		Disp_ScrollStopRequested();
+		break;
+	default:
+		break;
+	}
+}
+
+void
+App_OnSpecialKeyDown(cs_key_t key)
+{
+	switch(key) {
+	case CS_ARROW_UP:
+		Disp_ScrollUpRequested();
+		break;
+	case CS_ARROW_DOWN:
+		Disp_ScrollDownRequested();
+		break;
+	default:
+		break;
+	}
+}
+
+static
+void
+App_OnChar(unsigned char key)
+{
 	switch(key) {
 	case '\t':
 		Frame_InsertTab(frm);
@@ -105,14 +132,11 @@ App_OnKeyDown(unsigned char key)
 	}
 }
 
-void App_ScrollUp()
+void
+App_OnKeyDown(unsigned char key)
 {
-	Disp_ScrollUp();
-}
-
-void App_ScrollDown()
-{
-	Disp_ScrollDown();
+	Disp_ScrollReset();
+	App_OnChar(key);
 }
 
 //The App module should keep track of the File state
@@ -138,7 +162,7 @@ App_Read(FILE * file)
 	frm = Frame_Init(CHARS_PER_LINE);
 	
 	while((c = fgetc(file)) != EOF) {
-		App_OnKeyDown(c);
+		App_OnChar(c);
 	}
 }
 
@@ -148,16 +172,16 @@ App_Open(const char * filename)
 	FILE * file;
 	
 	printf("Opening file: %s\n", filename);
-	
 	file = fopen(filename, "r");
 	
 	App_Read(file);
 	
 	fclose(file);
-	
 	printf("...Done.\n");
 	
 	App_SaveFilename(filename);
+	
+	Disp_ScrollReset();
 }
 
 void
@@ -166,13 +190,11 @@ App_SaveAs(const char * filename)
 	FILE * file;
 	
 	printf("Saving to file: %s\n", filename);
-	
 	file = fopen(filename, "w");
 	
 	Frame_Write(frm, file);
 	
 	fclose(file);
-	
 	printf("...Done.\n");
 	
 	App_SaveFilename(filename);

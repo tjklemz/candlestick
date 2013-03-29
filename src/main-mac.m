@@ -79,8 +79,8 @@ static NSTimer * renderTimer;
  
     [[NSRunLoop currentRunLoop] addTimer:renderTimer
                                 forMode:NSDefaultRunLoopMode];
-    [[NSRunLoop currentRunLoop] addTimer:renderTimer
-                                forMode:NSEventTrackingRunLoopMode]; //Ensure timer fires during resize
+    //[[NSRunLoop currentRunLoop] addTimer:renderTimer
+    //                            forMode:NSEventTrackingRunLoopMode]; //Ensure timer fires during resize
 	
 	return self;
 }
@@ -214,20 +214,32 @@ static NSTimer * renderTimer;
 {	
 	switch([anEvent keyCode]) {
 	case UP_ARROW:
-		App_ScrollUp();
+		App_OnSpecialKeyDown(CS_ARROW_UP);
 	    break;
 	case DOWN_ARROW:
-		App_ScrollDown();
+		App_OnSpecialKeyDown(CS_ARROW_DOWN);
 		break;
 	default:
 		{
-			//unsigned char character = [[anEvent characters] UTF8String][0];
 			unsigned char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
-			//unsigned char character = [anEvent keyCode];
-			
-			//NSLog(@"Char: %d", character);
 			App_OnKeyDown(character);
 		}
+	    break;
+	}
+	
+	[self setNeedsDisplay:YES];
+}
+
+- (void)keyUp:(NSEvent *)anEvent
+{
+	switch([anEvent keyCode]) {
+	case UP_ARROW:
+		App_OnSpecialKeyUp(CS_ARROW_UP);
+	    break;
+	case DOWN_ARROW:
+		App_OnSpecialKeyUp(CS_ARROW_DOWN);
+		break;
+	default:
 	    break;
 	}
 	

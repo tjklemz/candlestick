@@ -26,6 +26,14 @@
 
 #define LINE_HEIGHT 1.8f
 
+
+/**************************************************************************
+ * Scrolling
+ **************************************************************************/
+
+#define NUM_STEPS 10
+#define STEP_AMT (1.0f / NUM_STEPS)
+
 typedef enum {
 	SCROLL_UP,
 	SCROLL_DOWN
@@ -38,6 +46,79 @@ typedef struct {
 } scrolling_t;
 
 static scrolling_t scroll;
+static int scroll_requested = 0;
+
+static void Disp_UpdateScroll(float amt)
+{
+	scroll.amt += amt;
+	
+	if(scroll.amt < 0) {
+		scroll.amt = 0;
+	}
+}
+
+static void Disp_Scroll(float amt)
+{
+	static int step = 0;
+	
+	if(step < NUM_STEPS) {
+		Disp_UpdateScroll(amt);
+		scroll.moving = 1;
+		++step;
+	} else {
+		scroll.moving = 0;
+		step = 0;
+	}
+}
+
+// How about pass in the Frame and have Display set the begin and end?
+// (since must know about the screen size, etc)
+// Like a scroll module, almost.
+
+// Have Disp calc how many lines to display? Then pass in to Frame?
+// How to know where to begin, though? Also, the top (when to stop scrolling)
+
+void
+Disp_ScrollUpRequested()
+{
+	scroll_requested = 1;
+	scroll.dir = SCROLL_UP;
+	
+	if(!scroll.moving) {
+		Disp_Scroll(STEP_AMT);
+	}
+}
+
+void
+Disp_ScrollDownRequested()
+{
+	scroll_requested = 1;
+	scroll.dir = SCROLL_DOWN;
+	
+	if(!scroll.moving) {
+		Disp_Scroll(-STEP_AMT);
+	}
+}
+
+void
+Disp_ScrollStopRequested()
+{
+	scroll_requested = 0;
+}
+
+void
+Disp_ScrollReset()
+{
+	scroll.moving = 0;
+	scroll.amt = 0;
+	scroll.dir = SCROLL_UP; // doesn't matter, but good to know the state
+}
+
+
+/**************************************************************************
+ * Display
+ **************************************************************************/
+
 static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
@@ -76,13 +157,13 @@ Disp_Render(Frame * frm)
 	float disp_x = (disp_w - (Frame_Length(frm)*fnt_size)) / 2;
 	float disp_y = disp_h / 2;
 	
-	if(scroll.moving) {
+	if(scroll.moving || scroll_requested) {
 		switch(scroll.dir) {
 		case SCROLL_UP:
-			Disp_ScrollUp();
+			Disp_Scroll(STEP_AMT);
 			break;
 		case SCROLL_DOWN:
-			Disp_ScrollDown();
+			Disp_Scroll(-STEP_AMT);
 			break;
 		default:
 			break;
@@ -99,7 +180,7 @@ Disp_Render(Frame * frm)
 
 	glPushMatrix();
 		glLoadIdentity();
-		Fnt_Print(fnt_reg, frm, disp_x, disp_y, 100 + (int)ceil(scroll.amt));
+		Fnt_Print(fnt_reg, frm, disp_x, disp_y, 50 + (int)ceil(scroll.amt));
 	glPopMatrix();
 }
 
@@ -125,60 +206,4 @@ Disp_Resize(int w, int h)
     gluPerspective(45.0f, ratio, 0.1f, 100.0f);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-}
-
-// How about pass in the Frame and have Display set the begin and end?
-// (since must know about the screen size, etc)
-// Like a scroll module, almost.
-
-// Have Disp calc how many lines to display? Then pass in to Frame?
-// How to know where to begin, though? Also, the top (when to stop scrolling)
-
-#define NUM_STEPS 8
-#define STEP_AMT (1.0f / NUM_STEPS)
-
-void
-Disp_ScrollUp()
-{
-	static int step = 0;
-	
-	scroll.dir = SCROLL_UP;
-	
-	if(step < NUM_STEPS) {
-		scroll.moving = 1;
-		scroll.amt += STEP_AMT;
-		++step;
-		printf("scrolling up! STEP_AMT: %f, amt: %f, step: %d\n", STEP_AMT, scroll.amt, step);
-	} else {
-		scroll.moving = 0;
-		step = 0;
-	}
-}
-
-void
-Disp_ScrollDown()
-{
-	static int step = 0;
-	
-	scroll.dir = SCROLL_DOWN;
-	
-	if(step < NUM_STEPS && scroll.amt > 0) {
-		scroll.moving = 1;
-		scroll.amt -= STEP_AMT;
-		++step;
-	} else {
-		scroll.moving = 0;
-		step = 0;
-		if(scroll.amt < 0) {
-			scroll.amt = 0;
-		}
-	}
-}
-
-void
-Disp_ScrollReset()
-{
-	scroll.moving = 0;
-	scroll.amt = 0;
-	scroll.dir = SCROLL_UP; // doesn't matter, but good to know the state
 }

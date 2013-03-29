@@ -21,9 +21,14 @@
 #ifndef APP_H
 #define APP_H
 
-/*typedef enum key_codes {
-} KeyCode;
-*/
+typedef enum {
+	CS_UNDEFINED   = -1,
+	CS_ARROW_LEFT  = 37,
+	CS_ARROW_UP    = 38,
+	CS_ARROW_RIGHT = 39,
+	CS_ARROW_DOWN  = 40
+} cs_key_t;
+
 
 //Golden Rectangle
 #define WIN_INIT_WIDTH  850 * 1.1
@@ -46,13 +51,13 @@ void
 App_OnRender();
 
 void
+App_OnSpecialKeyUp(cs_key_t key);
+
+void
+App_OnSpecialKeyDown(cs_key_t key);
+
+void
 App_OnKeyDown(unsigned char key);
-
-void
-App_ScrollUp();
-
-void
-App_ScrollDown();
 
 void
 App_Open(const char * filename);
