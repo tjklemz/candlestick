@@ -351,7 +351,7 @@ Frame_RevIterBegin(Frame * frm)
 {
 	int i = 1;
 	rev_iter = frm->cur_line;
-	while(i < frm->rev_iter_start && rev_iter) {
+	while(i < frm->rev_iter_start && rev_iter->prev) {
 		Frame_RevIterNext(frm);
 		++i;
 	}

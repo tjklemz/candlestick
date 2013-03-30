@@ -418,7 +418,7 @@ InitialWindowSize()
 		backing: NSBackingStoreBuffered
 		defer: YES
 		screen: [NSScreen mainScreen]];
-	//[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT)];
+	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, 100)];
 	[window setTitle: [[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];

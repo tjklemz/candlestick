@@ -31,7 +31,7 @@
  * Scrolling and Animation
  **************************************************************************/
 
-#define NUM_STEPS 8
+#define NUM_STEPS 4
 #define STEP_AMT (1.0f / NUM_STEPS)
 
 typedef enum {
@@ -90,7 +90,7 @@ Disp_Scroll(float amt)
 {
 	static int step = 0;
 	
-	if(step < NUM_STEPS) {
+	if(step < NUM_STEPS || scroll_requested) {
 		Disp_UpdateScroll(amt);
 		scroll.moving = 1;
 		++step;
@@ -185,7 +185,7 @@ Disp_Destroy()
 	Fnt_Destroy(fnt_reg);
 }
 
-#define DISP_LINE_PADDING 10
+#define DISP_LINE_PADDING 2
 
 //Frame is passed in, since input needs to deal with the Frame
 // and Display does not handle input, but only displaying
@@ -200,6 +200,7 @@ Disp_Render(Frame * frm)
 	int num_lines;
 	int first_line;
 	
+	// if scrolling, update the animation
 	if(scroll.moving || scroll_requested) {
 		switch(scroll.dir) {
 		case SCROLL_UP:
@@ -221,9 +222,11 @@ Disp_Render(Frame * frm)
 		first_line = 1;
 	}
 	
+	// crop the frame to what is viewable
 	Frame_SetRevIterBegin(frm, first_line);
 	
-	disp_y -= line_height * (scroll.amt - first_line) - line_height;
+	// scroll the display appropriately, minus the part that isn't viewable
+	disp_y = disp_y - line_height * (scroll.amt - first_line + 1);
 	
 	printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
 	
