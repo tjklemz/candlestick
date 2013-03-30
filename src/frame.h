@@ -67,16 +67,19 @@ Frame_InsertTab(Frame * frm);
  ************************************/
 
 void
+Frame_SetRevIterBegin(Frame * frm, int line);
+
+void
 Frame_IterBegin(Frame * frm);
 
 void
-Frame_IterEnd(Frame * frm);
-
-Line*
-Frame_IterPrev(Frame * frm);
+Frame_RevIterBegin(Frame * frm);
 
 Line*
 Frame_IterNext(Frame * frm);
+
+Line*
+Frame_RevIterNext(Frame * frm);
 
 /************************************
  * Frame I/O

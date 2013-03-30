@@ -299,8 +299,8 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
 	
 	glPushMatrix();
 	
-	Frame_IterEnd(frm);
-	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
+	Frame_RevIterBegin(frm);
+	while(line < max_lines && (cur_line = Frame_RevIterNext(frm))) {
 		len = Line_Length(cur_line);
 		glLoadIdentity();
 		glTranslatef((float)x, (float)y + h*line, 0);
@@ -310,14 +310,15 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
 	}
 	
 	glPopMatrix();
+	
 	glPopAttrib();
 	
 	/*********************************
 	 * display cursor
 	 *********************************/
 	
-	Frame_IterEnd(frm);
-	cur_line = Frame_IterPrev(frm);
+	Frame_RevIterBegin(frm);
+	cur_line = Frame_RevIterNext(frm);
 	len = Line_Length(cur_line);
 	glPushMatrix();
 		//glColor3f(0.2f, 0.2f, 0.2f);

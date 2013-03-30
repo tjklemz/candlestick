@@ -185,6 +185,8 @@ Disp_Destroy()
 	Fnt_Destroy(fnt_reg);
 }
 
+#define DISP_LINE_PADDING 5
+
 //Frame is passed in, since input needs to deal with the Frame
 // and Display does not handle input, but only displaying
 void
@@ -192,8 +194,11 @@ Disp_Render(Frame * frm)
 {	
 	//window coords for start of frame
 	float fnt_size = Fnt_Size(fnt_reg);
-	float disp_x = (disp_w - (Frame_Length(frm)*fnt_size)) / 2;
+	float line_height = Fnt_LineHeight(fnt_reg);
+	float disp_x = (int)((disp_w - (Frame_Length(frm)*fnt_size)) / 2);
 	float disp_y = disp_h / 2;
+	int num_lines;
+	int first_line;
 	
 	if(scroll.moving || scroll_requested) {
 		switch(scroll.dir) {
@@ -208,7 +213,21 @@ Disp_Render(Frame * frm)
 		}
 	}
 	
-	disp_y = disp_y - scroll.amt * Fnt_LineHeight(fnt_reg);
+	disp_y = disp_y - scroll.amt * line_height;
+	/*if(disp_y < 0) {
+		disp_y = 0;
+	}*/
+	
+	// figure out num lines
+	num_lines = (int)ceil(disp_h / line_height);
+	
+	if(!scroll.moving && !scroll_requested) {
+		// figure out first line
+		first_line = (int)(scroll.amt - num_lines / 2) - DISP_LINE_PADDING;
+		Frame_SetRevIterBegin(frm, first_line);
+	}
+	
+	//printf("num_lines: %d\tfirst_line: %d\n", num_lines, first_line);
 	
  	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
@@ -218,7 +237,7 @@ Disp_Render(Frame * frm)
 
 	glPushMatrix();
 		glLoadIdentity();
-		Fnt_Print(fnt_reg, frm, disp_x, disp_y, 50 + (int)ceil(scroll.amt));
+		Fnt_Print(fnt_reg, frm, disp_x, disp_y, 50);
 	glPopMatrix();
 }
 

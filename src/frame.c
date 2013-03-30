@@ -30,6 +30,7 @@ struct frame {
 	int line_len;
 	Node * lines;
 	Node * cur_line;
+	int rev_iter_start;
 };
 
 typedef enum line_end_type {
@@ -146,6 +147,7 @@ Frame_Init(int line_len)
 	frm->lines = Node_Init();
 	frm->lines->data = Line_CreateLine(line_len);
 	frm->cur_line = frm->lines;
+	frm->rev_iter_start = 1;
 	
 	return frm;
 }
@@ -297,32 +299,11 @@ Frame_InsertTab(Frame * frm)
 	}
 }
 
+/**************************************************************************
+ * Iterator
+ **************************************************************************/
+
 static Node * iter = NULL;
-
-void
-Frame_IterBegin(Frame * frm)
-{
-	iter = frm->lines;
-}
-
-void
-Frame_IterEnd(Frame * frm)
-{
-	iter = frm->cur_line;
-}
-
-Line*
-Frame_IterPrev(Frame * frm)
-{
-	Line * prev = NULL;
-	
-	if(iter) {
-		prev = (Line*)iter->data;
-		iter = iter->prev;
-	}
-	
-	return prev;
-}
 
 Line*
 Frame_IterNext(Frame * frm)
@@ -336,11 +317,64 @@ Frame_IterNext(Frame * frm)
 	return next;
 }
 
+static
 int
 Frame_IterHasNext(Frame * frm)
 {
 	return (iter != NULL);
 }
+
+void
+Frame_IterBegin(Frame * frm)
+{
+	iter = frm->lines;
+}
+
+
+/**************************************************************************
+ * Reverse Iterator
+ **************************************************************************/
+
+static Node * rev_iter = NULL;
+
+void
+Frame_SetRevIterBegin(Frame * frm, int line)
+{
+	if(line < 1) {
+		line = 1;
+	}
+	frm->rev_iter_start = line;
+}
+
+void
+Frame_RevIterBegin(Frame * frm)
+{
+	int i = 1;
+	rev_iter = frm->cur_line;
+	while(i < frm->rev_iter_start && rev_iter) {
+		Frame_RevIterNext(frm);
+		++i;
+	}
+}
+
+Line*
+Frame_RevIterNext(Frame * frm)
+{
+	//reverse of next is previous
+	Line * prev = NULL;
+	
+	if(rev_iter) {
+		prev = (Line*)rev_iter->data;
+		rev_iter = rev_iter->prev;
+	}
+	
+	return prev;
+}
+
+
+/**************************************************************************
+ * Frame write
+ **************************************************************************/
 
 #define BUF_SIZE 4096
 #define EOL_SIZE 1
