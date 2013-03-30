@@ -57,6 +57,25 @@ static NSTimer * renderTimer;
     [self setNeedsDisplay:YES];
 }
 
+static void startTimer()
+{
+	if(renderTimer == nil) {
+		renderTimer = [[NSTimer scheduledTimerWithTimeInterval:0.001   //in seconds
+	                                                    target:view
+	                                                  selector:@selector(timerFired:)
+	                                                  userInfo:nil
+	                                                   repeats:YES] retain];
+	}
+}
+
+static void stopTimer()
+{
+	if(renderTimer != nil) {
+		[renderTimer invalidate];
+		renderTimer = nil;
+	}
+}
+
 - (id)initWithFrame:(NSRect)frameRect
 {
     NSOpenGLPixelFormatAttribute attr[] = 
@@ -71,17 +90,6 @@ static NSTimer * renderTimer;
 	
     self = [super initWithFrame:frameRect pixelFormat:nsglFormat];
 	
-	renderTimer = [NSTimer timerWithTimeInterval:0.001   //a 1ms time interval
-	                                target:self
-	                                selector:@selector(timerFired:)
-	                                userInfo:nil
-	                                repeats:YES];
- 
-    [[NSRunLoop currentRunLoop] addTimer:renderTimer
-                                forMode:NSDefaultRunLoopMode];
-    //[[NSRunLoop currentRunLoop] addTimer:renderTimer
-    //                            forMode:NSEventTrackingRunLoopMode]; //Ensure timer fires during resize
-	
 	return self;
 }
 
@@ -92,6 +100,7 @@ static NSTimer * renderTimer;
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 	
 	App_OnInit();
+	App_AnimationDel(&startTimer, &stopTimer);
 }
 
 - (void)reshape
@@ -100,14 +109,12 @@ static NSTimer * renderTimer;
 	int h = [[[self window] contentView] bounds].size.height;
 	
 	App_OnResize(w, h);
-	//[super setNeedsDisplay:YES];
-	//[[self openGLContext] update];
-	//puts("reshape");
 }
 
 - (void)drawRect:(NSRect)rect
 {
 	App_OnRender();
+	
 	//swaps the buffers (double buffering) and calls glFlush()
 	[[self openGLContext] flushBuffer];
 }
@@ -115,16 +122,6 @@ static NSTimer * renderTimer;
 - (BOOL)acceptsFirstResponder
 {
 	return YES;
-}
-
-- (void)mouseDown:(NSEvent *)anEvent
-{
-	//puts("mousedown!");
-}
-
-- (void)mouseDragged:(NSEvent *)anEvent
-{
-	//puts("mousemoved!");
 }
 
 -(void)saveAs:(NSNotification *)notification
@@ -446,6 +443,8 @@ InitialWindowSize()
 {
 	App_OnDestroy();
 	[window release];
+	stopTimer();
+	
 	NSLog(@"Terminating...");
 }
 
@@ -478,11 +477,6 @@ InitialWindowSize()
 {
 	//puts("closed!");
 	[NSApp stop:self];
-}
-
-- (void)windowDidResize:(NSNotification *)notification
-{
-	//puts("resized!");
 }
 
 @end

@@ -23,6 +23,15 @@
 
 #include "frame.h"
 
+typedef void (*anim_del_func_t)(void);
+
+typedef struct {
+	anim_del_func_t on_start;
+	int called_start;
+	anim_del_func_t on_end;
+	int called_end;
+} anim_del_t;
+
 void
 Disp_Init(int fnt_size);
 
@@ -34,6 +43,9 @@ Disp_Render(Frame * frm);
 
 void
 Disp_Resize(int w, int h);
+
+void
+Disp_AnimationDel(anim_del_t * anim_del);
 
 void
 Disp_ScrollUpRequested();

@@ -33,6 +33,7 @@
 
 static Frame * frm = 0;
 static char * _filename = 0;
+static anim_del_t * anim_del = 0;
 
 void
 App_OnInit()
@@ -57,6 +58,7 @@ App_OnInit()
 void
 App_OnDestroy()
 {
+	free(anim_del);
 	free(_filename);
 	Disp_Destroy();
 	Frame_Destroy(frm);
@@ -137,6 +139,23 @@ App_OnKeyDown(unsigned char key)
 {
 	Disp_ScrollReset();
 	App_OnChar(key);
+}
+
+void
+App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
+{
+	assert(anim_del == 0);
+	
+	anim_del = (anim_del_t *)malloc(sizeof(anim_del_t));
+	
+	anim_del->on_start = OnStart;
+	anim_del->called_start = 0;
+	anim_del->on_end = OnEnd;
+	anim_del->called_end = 0;
+	
+	Disp_AnimationDel(anim_del);
+	
+	printf("Delegates set.\n");
 }
 
 //The App module should keep track of the File state

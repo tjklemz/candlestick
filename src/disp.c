@@ -28,10 +28,10 @@
 
 
 /**************************************************************************
- * Scrolling
+ * Scrolling and Animation
  **************************************************************************/
 
-#define NUM_STEPS 10
+#define NUM_STEPS 8
 #define STEP_AMT (1.0f / NUM_STEPS)
 
 typedef enum {
@@ -47,8 +47,35 @@ typedef struct {
 
 static scrolling_t scroll;
 static int scroll_requested = 0;
+static anim_del_t * anim_del = 0;
 
-static void Disp_UpdateScroll(float amt)
+static
+void
+Disp_AnimStart()
+{
+	if(anim_del && !anim_del->called_start) {
+		anim_del->on_start();
+		anim_del->called_start = 1;
+		anim_del->called_end = 0;
+	}
+}
+
+static
+void
+Disp_AnimEnd()
+{
+	if(!scroll_requested && !scroll.moving) {
+		if(anim_del && !anim_del->called_end) {
+			anim_del->on_end();
+			anim_del->called_end = 1;
+			anim_del->called_start = 0;
+		}
+	}
+}
+
+static
+void
+Disp_UpdateScroll(float amt)
 {
 	scroll.amt += amt;
 	
@@ -57,7 +84,9 @@ static void Disp_UpdateScroll(float amt)
 	}
 }
 
-static void Disp_Scroll(float amt)
+static
+void
+Disp_Scroll(float amt)
 {
 	static int step = 0;
 	
@@ -68,6 +97,8 @@ static void Disp_Scroll(float amt)
 	} else {
 		scroll.moving = 0;
 		step = 0;
+		
+		Disp_AnimEnd();
 	}
 }
 
@@ -84,9 +115,11 @@ Disp_ScrollUpRequested()
 	scroll_requested = 1;
 	scroll.dir = SCROLL_UP;
 	
-	if(!scroll.moving) {
+	Disp_AnimStart();
+	
+	/*if(!scroll.moving) {
 		Disp_Scroll(STEP_AMT);
-	}
+	}*/
 }
 
 void
@@ -95,9 +128,11 @@ Disp_ScrollDownRequested()
 	scroll_requested = 1;
 	scroll.dir = SCROLL_DOWN;
 	
-	if(!scroll.moving) {
+	Disp_AnimStart();
+	
+	/*if(!scroll.moving) {
 		Disp_Scroll(-STEP_AMT);
-	}
+	}*/
 }
 
 void
@@ -109,9 +144,12 @@ Disp_ScrollStopRequested()
 void
 Disp_ScrollReset()
 {
+	scroll_requested = 0;
 	scroll.moving = 0;
 	scroll.amt = 0;
 	scroll.dir = SCROLL_UP; // doesn't matter, but good to know the state
+	
+	Disp_AnimEnd();
 }
 
 
@@ -206,4 +244,10 @@ Disp_Resize(int w, int h)
     gluPerspective(45.0f, ratio, 0.1f, 100.0f);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+}
+
+void
+Disp_AnimationDel(anim_del_t * the_anim_del)
+{
+	anim_del = the_anim_del;
 }
