@@ -28,6 +28,7 @@
 
 struct frame {
 	int line_len;
+	int num_lines;
 	Node * lines;
 	Node * cur_line;
 	int rev_iter_start;
@@ -117,6 +118,8 @@ Frame_AddLine(Frame * frm)
 	Node_Append(frm->lines, new_line);
 	
 	frm->cur_line = frm->cur_line->next;
+	
+	frm->num_lines += 1;
 }
 
 static
@@ -130,7 +133,15 @@ Frame_DeleteLine(Frame * frm)
 		frm->cur_line = frm->cur_line->prev;
 		Line_Destroy(del_line);
 		Node_Delete(del);
+		
+		frm->num_lines -= 1;
 	}
+}
+
+int
+Frame_NumLines(Frame * frm)
+{
+	return frm->num_lines;
 }
 
 int
@@ -147,6 +158,7 @@ Frame_Init(int line_len)
 	frm->lines = Node_Init();
 	frm->lines->data = Line_CreateLine(line_len);
 	frm->cur_line = frm->lines;
+	frm->num_lines = 1;
 	frm->rev_iter_start = 1;
 	
 	return frm;

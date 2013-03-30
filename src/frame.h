@@ -40,6 +40,9 @@ Line_Text(Line * line);
  * Frame Operations
  ************************************/
 
+int
+Frame_NumLines(Frame * frm);
+
 //returns number of characters per line
 int
 Frame_Length(Frame * frm);

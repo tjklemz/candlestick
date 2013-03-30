@@ -40,7 +40,8 @@ Fnt_Size(Fnt * fnt)
 	return GLYPH_SPACING;// + 1 / GLYPH_SPACING;
 }
 
-float Fnt_LineHeight(Fnt * fnt)
+float
+Fnt_LineHeight(Fnt * fnt)
 {
 	return fnt->line_height;
 }

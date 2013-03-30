@@ -23,8 +23,6 @@
 #include "opengl.h"
 #include "app.h"
 
-#import <QuartzCore/CVDisplayLink.h>
-
 @interface SysView : NSOpenGLView
 {
 }

@@ -75,9 +75,11 @@ Disp_AnimEnd()
 
 static
 void
-Disp_UpdateScroll(float amt)
+Disp_UpdateScroll(float amt, float limit)
 {
-	scroll.amt += amt;
+	if(scroll.amt + amt < limit) {
+		scroll.amt += amt;
+	}
 	
 	if(scroll.amt < 0) {
 		scroll.amt = 0;
@@ -86,12 +88,12 @@ Disp_UpdateScroll(float amt)
 
 static
 void
-Disp_Scroll(float amt)
+Disp_Scroll(float amt, float limit)
 {
 	static int step = 0;
 	
 	if(step < NUM_STEPS || scroll_requested) {
-		Disp_UpdateScroll(amt);
+		Disp_UpdateScroll(amt, limit);
 		scroll.moving = 1;
 		++step;
 	} else {
@@ -116,10 +118,6 @@ Disp_ScrollUpRequested()
 	scroll.dir = SCROLL_UP;
 	
 	Disp_AnimStart();
-	
-	/*if(!scroll.moving) {
-		Disp_Scroll(STEP_AMT);
-	}*/
 }
 
 void
@@ -129,10 +127,6 @@ Disp_ScrollDownRequested()
 	scroll.dir = SCROLL_DOWN;
 	
 	Disp_AnimStart();
-	
-	/*if(!scroll.moving) {
-		Disp_Scroll(-STEP_AMT);
-	}*/
 }
 
 void
@@ -169,7 +163,7 @@ Disp_Init(int fnt_size)
 	scroll.amt = 0.0f;
 	scroll.dir = SCROLL_UP;
 	
-	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, 1.8f);
+	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
 
 	glShadeModel(GL_SMOOTH);
     glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
@@ -202,12 +196,14 @@ Disp_Render(Frame * frm)
 	
 	// if scrolling, update the animation
 	if(scroll.moving || scroll_requested) {
+		float limit = Frame_NumLines(frm) - (1 - STEP_AMT);
+		
 		switch(scroll.dir) {
 		case SCROLL_UP:
-			Disp_Scroll(STEP_AMT);
+			Disp_Scroll(STEP_AMT, limit);
 			break;
 		case SCROLL_DOWN:
-			Disp_Scroll(-STEP_AMT);
+			Disp_Scroll(-STEP_AMT, limit);
 			break;
 		default:
 			break;
@@ -228,7 +224,7 @@ Disp_Render(Frame * frm)
 	// scroll the display appropriately, minus the part that isn't viewable
 	disp_y = disp_y - line_height * (scroll.amt - first_line + 1);
 	
-	printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
+	//printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
 	
  	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
