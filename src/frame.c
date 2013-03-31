@@ -19,7 +19,7 @@
  **************************************************************************/
 
 #include "frame.h"
-#include "dlist.h"
+#include "list.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,11 +27,10 @@
 #include <assert.h>
 
 struct frame {
-	int line_len;
 	int num_lines;
 	Node * lines;
 	Node * cur_line;
-	int rev_iter_start;
+	int iter_end;
 };
 
 typedef enum line_end_type {
@@ -40,7 +39,7 @@ typedef enum line_end_type {
 } LINE_END;
 
 struct line_type {
-	unsigned char * text;
+	unsigned char text[CHARS_PER_LINE];
 	int len;
 	int size;
 	LINE_END end;
@@ -72,7 +71,6 @@ Line*
 Line_CreateLine(int size)
 {
 	Line * line = (Line *)malloc(sizeof(Line));
-	line->text = (unsigned char *)malloc(sizeof(unsigned char) * size);
 	line->size = size;
 	line->len = 0;
 	line->end = SOFT;
@@ -84,7 +82,6 @@ static
 void
 Line_Destroy(Line * line)
 {
-	free(line->text);
 	free(line);
 	
 	line = NULL;
@@ -114,8 +111,8 @@ void
 Frame_AddLine(Frame * frm)
 {
 	Node * new_line = Node_Init();
-	new_line->data = Line_CreateLine(frm->line_len);
-	Node_Append(frm->lines, new_line);
+	new_line->data = Line_CreateLine(CHARS_PER_LINE);
+	Node_Append(frm->cur_line, new_line);
 	
 	frm->cur_line = frm->cur_line->next;
 	
@@ -144,22 +141,15 @@ Frame_NumLines(Frame * frm)
 	return frm->num_lines;
 }
 
-int
-Frame_Length(Frame * frm)
-{
-	return frm->line_len;
-}
-
 Frame *
-Frame_Init(int line_len)
+Frame_Init()
 {
 	Frame * frm = (Frame *)malloc(sizeof(Frame));
-	frm->line_len = line_len;
 	frm->lines = Node_Init();
-	frm->lines->data = Line_CreateLine(line_len);
+	frm->lines->data = Line_CreateLine(CHARS_PER_LINE);
 	frm->cur_line = frm->lines;
 	frm->num_lines = 1;
-	frm->rev_iter_start = 1;
+	frm->iter_end = 1;
 	
 	return frm;
 }
@@ -311,6 +301,7 @@ Frame_InsertTab(Frame * frm)
 	}
 }
 
+
 /**************************************************************************
  * Iterator
  **************************************************************************/
@@ -342,42 +333,37 @@ Frame_IterBegin(Frame * frm)
 	iter = frm->lines;
 }
 
-
-/**************************************************************************
- * Reverse Iterator
- **************************************************************************/
-
-static Node * rev_iter = NULL;
-
 void
-Frame_SetRevIterBegin(Frame * frm, int line)
+Frame_SetEnd(Frame * frm, int line)
 {
 	if(line < 1) {
 		line = 1;
 	}
-	frm->rev_iter_start = line;
+	frm->iter_end = line;
 }
 
 void
-Frame_RevIterBegin(Frame * frm)
+Frame_IterEnd(Frame * frm)
 {
 	int i = 1;
-	rev_iter = frm->cur_line;
-	while(i < frm->rev_iter_start && rev_iter->prev) {
-		Frame_RevIterNext(frm);
+	//start at the end
+	iter = frm->cur_line;
+	//move forward to the client's end
+	while(i < frm->iter_end && iter->prev) {
+		iter = iter->prev;
 		++i;
 	}
 }
 
 Line*
-Frame_RevIterNext(Frame * frm)
+Frame_IterPrev(Frame * frm)
 {
 	//reverse of next is previous
 	Line * prev = NULL;
 	
-	if(rev_iter) {
-		prev = (Line*)rev_iter->data;
-		rev_iter = rev_iter->prev;
+	if(iter) {
+		prev = (Line*)iter->data;
+		iter = iter->prev;
 	}
 	
 	return prev;

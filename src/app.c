@@ -47,7 +47,7 @@ App_OnInit()
 	// complicated, definitely need to refactor.
 	//c.f. main.c on the linux fullscreen issue that caused this mess.
 	if(!frm) {
-		frm = Frame_Init(CHARS_PER_LINE);
+		frm = Frame_Init();
 	} else {
 		Disp_Destroy();
 	}
@@ -174,15 +174,45 @@ static
 void
 App_Read(FILE * file)
 {
-	char c;
+	//char c;
+	unsigned char * buffer;
+	long len;
+	size_t result;
+	long i;
 	
-	//empty the current frame so can fill it
+	//empty the current frame so we can fill it
 	Frame_Destroy(frm);
 	frm = Frame_Init(CHARS_PER_LINE);
 	
-	while((c = fgetc(file)) != EOF) {
-		App_OnChar(c);
+	fseek(file, 0, SEEK_END);
+	len = ftell(file);
+	rewind(file);
+	
+	buffer = (unsigned char *)malloc(sizeof(unsigned char) * len);
+	if (!buffer) {
+		fputs("Memory error", stderr); 
+		exit(2);
 	}
+	
+	printf("Got mem, now reading...\n");
+	result = fread(buffer, 1, len, file);
+	if(result != len) {
+		fputs("Reading error", stderr);
+		exit(3);
+	}
+	printf("Read into mem, now filling the frame with len: %ld\n", len);
+	for(i = 0; i < len; ++i) {
+		App_OnChar(buffer[i]);
+		if(i % 4096 == 0) {
+			printf("Filled %ld bytes...\n", i);
+		}
+	}
+	
+	free(buffer);
+	
+	/*while((c = fgetc(file)) != EOF) {
+		App_OnChar(c);
+	}*/
 }
 
 void

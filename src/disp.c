@@ -189,10 +189,11 @@ Disp_Render(Frame * frm)
 	//window coords for start of frame
 	float fnt_size = Fnt_Size(fnt_reg);
 	float line_height = Fnt_LineHeight(fnt_reg);
-	float disp_x = (int)((disp_w - (Frame_Length(frm)*fnt_size)) / 2);
+	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_size)) / 2);
 	float disp_y = disp_h / 2;
 	int num_lines;
 	int first_line;
+	int show_cursor;
 	
 	// if scrolling, update the animation
 	if(scroll.moving || scroll_requested) {
@@ -214,12 +215,15 @@ Disp_Render(Frame * frm)
 	num_lines = (int)ceil(disp_h / line_height);
 	first_line = (int)(scroll.amt - num_lines / 2);
 	
-	if(first_line < 1) {
+	if(first_line <= 1) {
 		first_line = 1;
+		show_cursor = 1;
+	} else {
+		show_cursor = 0;
 	}
 	
 	// crop the frame to what is viewable
-	Frame_SetRevIterBegin(frm, first_line);
+	Frame_SetEnd(frm, first_line);
 	
 	// scroll the display appropriately, minus the part that isn't viewable
 	disp_y = disp_y - line_height * (scroll.amt - first_line + 1);
@@ -234,7 +238,7 @@ Disp_Render(Frame * frm)
 
 	glPushMatrix();
 		glLoadIdentity();
-		Fnt_Print(fnt_reg, frm, disp_x, disp_y, num_lines + DISP_LINE_PADDING);
+		Fnt_Print(fnt_reg, frm, disp_x, disp_y, num_lines + DISP_LINE_PADDING, show_cursor);
 	glPopMatrix();
 }
 

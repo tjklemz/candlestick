@@ -1,5 +1,5 @@
 /*************************************************************************
- * dlist.c (Double Linked List)
+ * list.c (Double Linked List)
  *
  * Candlestick App: Just Write. A minimalist, cross-platform writing app.
  * Copyright (C) 2013 Thomas Klemz
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  **************************************************************************/
 
-#include "dlist.h"
+#include "list.h"
 
 #include <stdlib.h>
 #include <stdio.h>

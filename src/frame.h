@@ -23,6 +23,20 @@
 
 #include <stdio.h>
 
+/* A study at Wichita State University found that CPL had only small effects 
+ * on readability, including factors of speed and comprehension. When asked 
+ * for preferences, however, 60% of respondents indicated a preference for 
+ * either the shortest (35 CPL) or longest (95 CPL) lines used in the study.
+ * At the same time, 100% of respondents selected either one of these 
+ * quantities as being the least desirable.
+ * <http://psychology.wichita.edu/surl/usabilitynews/72/LineLength.asp>
+ *
+ * The following is simply the average of 35 and 95, but with a nicer,
+ * computer number (power of 2, 2^6).
+ */
+
+#define CHARS_PER_LINE 64
+
 typedef struct frame Frame;
 typedef struct line_type Line;
 
@@ -43,12 +57,8 @@ Line_Text(Line * line);
 int
 Frame_NumLines(Frame * frm);
 
-//returns number of characters per line
-int
-Frame_Length(Frame * frm);
-
 Frame*
-Frame_Init(int line_len);
+Frame_Init();
 
 void
 Frame_Destroy(Frame * frm);
@@ -70,19 +80,19 @@ Frame_InsertTab(Frame * frm);
  ************************************/
 
 void
-Frame_SetRevIterBegin(Frame * frm, int line);
+Frame_SetEnd(Frame * frm, int line);
 
 void
 Frame_IterBegin(Frame * frm);
 
 void
-Frame_RevIterBegin(Frame * frm);
+Frame_IterEnd(Frame * frm);
 
 Line*
 Frame_IterNext(Frame * frm);
 
 Line*
-Frame_RevIterNext(Frame * frm);
+Frame_IterPrev(Frame * frm);
 
 /************************************
  * Frame I/O

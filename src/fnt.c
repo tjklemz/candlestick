@@ -273,7 +273,7 @@ Fnt_Destroy(Fnt * fnt)
  **********************************************************************/
 
 void
-Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
+Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 {
 	GLuint flist = fnt->list_base;
 	float h = fnt->line_height;
@@ -300,8 +300,8 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
 	
 	glPushMatrix();
 	
-	Frame_RevIterBegin(frm);
-	while(line < max_lines && (cur_line = Frame_RevIterNext(frm))) {
+	Frame_IterEnd(frm);
+	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
 		len = Line_Length(cur_line);
 		glLoadIdentity();
 		glTranslatef((float)x, (float)y + h*line, 0);
@@ -318,19 +318,21 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines)
 	 * display cursor
 	 *********************************/
 	
-	Frame_RevIterBegin(frm);
-	cur_line = Frame_RevIterNext(frm);
-	len = Line_Length(cur_line);
-	glPushMatrix();
-		//glColor3f(0.2f, 0.2f, 0.2f);
-		glLoadIdentity();
-		glTranslatef((float)x + len*GLYPH_SPACING, (float)y, 0);
-		glMultMatrixf(modelview_matrix);
-		glBegin(GL_LINES);
-			glVertex2i(0, 0);
-			glVertex2i(GLYPH_SPACING, 0);
-		glEnd();
-	glPopMatrix();
+	if(show_cursor) {
+		Frame_IterEnd(frm);
+		cur_line = Frame_IterPrev(frm);
+		len = Line_Length(cur_line);
+		glPushMatrix();
+			//glColor3f(0.2f, 0.2f, 0.2f);
+			glLoadIdentity();
+			glTranslatef((float)x + len*GLYPH_SPACING, (float)y, 0);
+			glMultMatrixf(modelview_matrix);
+			glBegin(GL_LINES);
+				glVertex2i(0, 0);
+				glVertex2i(GLYPH_SPACING, 0);
+			glEnd();
+		glPopMatrix();
+	}
 
 	//go back to world coords
 	PopScreenCoordMat();

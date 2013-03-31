@@ -46,7 +46,7 @@ COMMON_SRC = \
   disp.c \
   fnt.c \
   frame.c \
-  dlist.c \
+  list.c \
   utils.c \
   $(NULL)
 

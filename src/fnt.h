@@ -47,7 +47,8 @@ float Fnt_LineHeight(Fnt * fnt);
 /**********************************************************************
  * creates a fnt with a given name and height (in points)
  **********************************************************************/
-Fnt * Fnt_Init(const char * fname, unsigned int height, float line_height);
+Fnt*
+Fnt_Init(const char * fname, unsigned int height, float line_height);
 
 /**********************************************************************
  * destroys the fnt (destructor)
@@ -58,7 +59,8 @@ void Fnt_Destroy(Fnt * fnt);
  * prints text at window coords (x,y) using the fnt
  **********************************************************************/
 
-void Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines);
+void
+Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor);
 
 
 #endif
