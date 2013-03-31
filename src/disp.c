@@ -24,7 +24,7 @@
 #include "utils.h"
 #include <math.h>
 
-#define LINE_HEIGHT 1.8f
+#define LINE_HEIGHT 1.95f
 
 
 /**************************************************************************
@@ -154,7 +154,7 @@ Disp_ScrollReset()
 static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
-static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
+static const char * const fnt_reg_name = "./font/mplus-2m-regular.ttf";
 
 void
 Disp_Init(int fnt_size)
