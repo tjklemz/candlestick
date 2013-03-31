@@ -216,7 +216,7 @@ static void stopTimer()
 		break;
 	default:
 		{
-			unsigned char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
+			char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
 			App_OnKeyDown(character);
 		}
 	    break;

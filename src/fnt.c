@@ -23,7 +23,7 @@
 #include <math.h>
 
 #define GLYPH_SPACING 12
-#define NUM_CHARS 255
+#define NUM_CHARS 128
 
 //defined as Fnt in the interface
 
@@ -111,7 +111,7 @@ Fnt_LineHeight(Fnt * fnt)
  
  static 
  FT_Glyph 
- Fnt_CreateGlyph(FT_Face face, unsigned char ch)
+ Fnt_CreateGlyph(FT_Face face, char ch)
  {
 	FT_Glyph glyph;
 	unsigned long ci = FT_Get_Char_Index(face, ch);
@@ -139,7 +139,7 @@ Fnt_LineHeight(Fnt * fnt)
 
 static 
 void 
-Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, unsigned char ch, GLuint list_base, GLuint * tex_base)
+Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, char ch, GLuint list_base, GLuint * tex_base)
 {
 	GLuint textureID = tex_base[(int)ch];
 	GLuint listID = list_base + (GLuint)ch;

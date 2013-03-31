@@ -47,7 +47,7 @@ typedef struct line_type Line;
 int
 Line_Length(Line * line);
 
-unsigned char*
+char*
 Line_Text(Line * line);
 
 /************************************
@@ -64,7 +64,7 @@ void
 Frame_Destroy(Frame * frm);
 
 void
-Frame_InsertCh(Frame * frm, unsigned char ch);
+Frame_InsertCh(Frame * frm, char ch);
 
 void
 Frame_DeleteCh(Frame * frm);

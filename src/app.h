@@ -55,7 +55,7 @@ void
 App_OnSpecialKeyDown(cs_key_t key);
 
 void
-App_OnKeyDown(unsigned char key);
+App_OnKeyDown(char key);
 
 void
 App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void));

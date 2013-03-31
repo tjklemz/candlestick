@@ -39,7 +39,7 @@ typedef enum line_end_type {
 } LINE_END;
 
 struct line_type {
-	unsigned char text[CHARS_PER_LINE];
+	char text[CHARS_PER_LINE];
 	int len;
 	int size;
 	LINE_END end;
@@ -60,7 +60,7 @@ Line_SetLength(Line * line, int len)
 }
 
 //should rename to Line_TextRaw or something
-unsigned char*
+char*
 Line_Text(Line * line)
 {
 	return line->text;
@@ -89,7 +89,7 @@ Line_Destroy(Line * line)
 
 static
 void
-Line_InsertCh(Line * line, unsigned char ch)
+Line_InsertCh(Line * line, char ch)
 {
 	if(line->len < line->size) {
 		line->text[line->len] = ch;
@@ -203,7 +203,7 @@ Frame_SoftWrap(Frame * frm)
 		
 		wrap_amount = full_line->size - i - 1;
 		
-		memcpy(new_line->text, &full_line->text[i+1], wrap_amount*sizeof(unsigned char));
+		memcpy(new_line->text, &full_line->text[i+1], wrap_amount*sizeof(char));
 		
 		Line_SetLength(new_line, wrap_amount);
 		//printf("New new_line len: %d\n", wrap_amount);
@@ -238,7 +238,7 @@ Frame_UndoSoftWrap(Frame * frm)
 				int cur_room = cur_line->len;
 				
 				if(prev_room > cur_room) {
-					memcpy(&prev_line->text[prev_line->len+1], cur_line->text, cur_room*sizeof(unsigned char));
+					memcpy(&prev_line->text[prev_line->len+1], cur_line->text, cur_room*sizeof(char));
 					Line_SetLength(prev_line, prev_line->len + cur_room + 1);
 					Frame_DeleteLine(frm);
 				}
@@ -248,7 +248,7 @@ Frame_UndoSoftWrap(Frame * frm)
 }
 
 void
-Frame_InsertCh(Frame * frm, unsigned char ch)
+Frame_InsertCh(Frame * frm, char ch)
 {
 	Line * cur_line = (Line *)frm->cur_line->data;
 	

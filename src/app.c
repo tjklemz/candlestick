@@ -106,14 +106,14 @@ App_OnSpecialKeyDown(cs_key_t key)
 
 static
 void
-App_OnChar(unsigned char key)
+App_OnChar(char key)
 {
 	switch(key) {
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
 	//actual delete
-	case 239:
+	//case 239:
 	//backspace
 	case 127:
 	case '\b':
@@ -124,9 +124,7 @@ App_OnChar(unsigned char key)
 		Frame_InsertNewLine(frm);
 		break;
 	default:
-		//supports Latin-1 set
-		//only non-printing character >= space (32) is DEL (127)
-		//	which is taken care of already
+		//backspace
 		if(key >= 32) {
 			Frame_InsertCh(frm, key);
 		}
@@ -135,7 +133,7 @@ App_OnChar(unsigned char key)
 }
 
 void
-App_OnKeyDown(unsigned char key)
+App_OnKeyDown(char key)
 {
 	Disp_ScrollReset();
 	App_OnChar(key);
@@ -175,7 +173,7 @@ void
 App_Read(FILE * file)
 {
 	//char c;
-	unsigned char * buffer;
+	char * buffer;
 	long len;
 	size_t result;
 	long i;
@@ -188,7 +186,7 @@ App_Read(FILE * file)
 	len = ftell(file);
 	rewind(file);
 	
-	buffer = (unsigned char *)malloc(sizeof(unsigned char) * len);
+	buffer = (char *)malloc(sizeof(char) * len);
 	if (!buffer) {
 		fputs("Memory error", stderr); 
 		exit(2);
