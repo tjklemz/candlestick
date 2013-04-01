@@ -1,4 +1,4 @@
-###########################################################
+######################################################################
 #
 # Makefile for candlestick app
 #
@@ -8,10 +8,11 @@
 # You are free to use, distribute, and modify this
 # as long as you grant the same freedoms to others.
 # See the file COPYING for the full license.
-###########################################################
+######################################################################
 
 BINARY = candlestick
-ARCHIVE = candlestick.tar.bz2
+APPNAME = candlestick
+ARCHIVE = $(APPNAME).tar.bz2
 
 # Recommend gcc or anything compatible (such as Clang).
 # Clang will compile much faster on the Mac,
@@ -39,8 +40,13 @@ SRCDIR = src
 LIBDIR = lib/$(PLAT)
 RESDIR = res
 OUTDIR = package
+APPDIR = $(OUTDIR)/$(APPNAME)app
 MACAPP = $(BINARY).app
+FONTDIR = $(RESDIR)/common/font
 
+# It's better to list out the source files than glob them.
+# This way, there can be other WIP files in the directory w/o issue,
+# and there's no unnecessary compiling.
 COMMON_SRC = \
   app.c \
   disp.c \
@@ -75,6 +81,11 @@ SOURCE = $(addprefix $(SRCDIR)/, $(COMMON_SRC) $(MAIN_SRC))
 LDFLAGS = $(COMMON_LIBS) $(OS_LIBS) $(GL_LIBS) $(FT_LIBS)
 CFLAGS = $(FREETYPE_INC)
 
+
+######################################################################
+# Compiling the app
+######################################################################
+
 .PHONY: all
 all: $(BINARY)
 
@@ -83,27 +94,60 @@ $(BINARY): $(SOURCE)
 	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
 	@echo "\n...Done building."
 
+
+######################################################################
+# Packaging the app for distribution
+######################################################################
+
 .PHONY: package-mac
-package-mac: $(BINARY) $(RESDIR)/mac/* $(RESDIR)/common/*
-	@echo "\nPackaging $(BINARY)..."
-	@mkdir -p $(OUTDIR)
-	@cp -Ra $(RESDIR)/mac/$(MACAPP) $(OUTDIR)
-	@cp -a $(BINARY) $(OUTDIR)/$(MACAPP)/Contents/MacOS
-	@cp -Ra $(RESDIR)/common/font $(OUTDIR)/$(MACAPP)/Contents/MacOS
-	@tar -cjf $(OUTDIR)/$(ARCHIVE) $(OUTDIR)/$(MACAPP)
-	@echo "Packaged $(BINARY) into $(OUTDIR)/$(MACAPP)\nArchived into $(OUTDIR)/$(ARCHIVE)"
+package-mac: package-common $(RESDIR)/mac/*
+	@cp -Ra $(RESDIR)/mac/$(MACAPP) $(APPDIR)
+	@cp -a $(BINARY) $(APPDIR)/$(MACAPP)/Contents/MacOS
+	@cp -Ra $(FONTDIR) $(APPDIR)/$(MACAPP)/Contents/MacOS
+	@tar -cjf $(OUTDIR)/$(ARCHIVE) $(APPDIR)/$(MACAPP)
+	@echo "Packaged $(APPNAME) into $(APPDIR)/$(MACAPP)\n"
+	@echo "Archived into $(OUTDIR)/$(ARCHIVE)"
+
+.PHONY: package-nix
+package-nix: package-common $(RESDIR)/nix/*
+	@cp -a $(BINARY) $(APPDIR)
+	@cp -Ra $(FONTDIR) $(APPDIR)
+	@echo "Packaged $(APPNAME) into $(APPDIR)."
+
+.PHONY: package-common
+package-common: $(BINARY) $(RESDIR)/common/*
+	@echo "\nPackaging $(APPNAME)..."
+	@mkdir -p $(APPDIR)
 
 .PHONY: package
 package: package-$(PLAT)
+	@echo "\nDone packaging. See the $(APPDIR) folder.\n"
+
+
+######################################################################
+# Running the app
+######################################################################
+
+.PHONY: run-mac
+run-mac: package
+	@open $(APPDIR)/$(MACAPP)
+	
+.PHONY: run-nix
+run-nix: package
+	@cd $(APPDIR) && ./$(BINARY)
 
 .PHONY: run
-run: package
-	@echo "Running $(BINARY)..."
-	@open $(OUTDIR)/$(MACAPP)
+run: run-$(PLAT)
+	@echo "...Finished running $(APPNAME)."
+
+
+######################################################################
+# Maintenance (janitorial work)
+######################################################################
 
 .PHONY: clean
 clean:
 	@echo Cleaning up...
 	-@rm $(BINARY) 2> /dev/null || echo "There was no binary..."
-	-@rm -r $(OUTDIR) 2> /dev/null || echo "There was no archive..."
+	-@rm -r $(OUTDIR) 2> /dev/null || echo "There was no package..."
 	@echo Done.

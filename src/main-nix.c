@@ -54,7 +54,7 @@ DestroyWindow()
 {
 	glXMakeCurrent(dpy, None, NULL);
 	glXDestroyContext(dpy, glc);
-	XDestroyWindow(dpy, win);
+	XDestroyWindow(dpy, xev.xclient.window);
 	XCloseDisplay(dpy);
 }
 
