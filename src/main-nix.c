@@ -25,6 +25,8 @@
 #include "opengl.h"
 #include "app.h"
 
+#include <X11/Xatom.h>
+
 static const char * const APP_NAME = "Candlestick";
 
 static Display * dpy;
@@ -39,6 +41,7 @@ static XWindowAttributes gwa;
 static XEvent xev;
 static int quit = 0;
 static int fullscreen = 0;
+static Atom wmDeleteMessage;
 
 static
 void
@@ -95,7 +98,7 @@ CreateWindow()
 	cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 
 	swa.colormap = cmap;
-	swa.event_mask = ExposureMask | KeyPressMask;
+	swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask;
 	swa.background_pixel = 1;
 	
 	//get width and height of desktop
@@ -140,6 +143,12 @@ CreateWindow()
 		XMoveWindow(dpy, win, x, y);
 	}
 	
+	// Register interest in the delete window message.
+	// This allows us to catch the close button window message directly
+	// from the window manager and handle it ourselves.
+	wmDeleteMessage = XInternAtom(dpy, "WM_DELETE_WINDOW", 0);
+	XSetWMProtocols(dpy, win, &wmDeleteMessage, 1);
+	
 	
 	// make sure to enable OpenGL before showing window,
 	// otherwise weird window flash/artifact for a second.
@@ -169,24 +178,49 @@ int main(int argc, char *argv[])
 		while(XPending(dpy)) {
 			XNextEvent(dpy, &xev);
 			
-			if(xev.type == Expose) {
+			if (xev.type == ClientMessage &&
+				xev.xclient.data.l[0] == wmDeleteMessage) {
+				printf("Quitting...\n");
+				quit = 1;
+			} else if(xev.type == Expose) {
 				XGetWindowAttributes(dpy, win, &gwa);
 				App_OnResize(gwa.width, gwa.height);
 			} else if(xev.type == KeyPress) {
 				XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
 				
 				switch(key) {
-					case XK_Escape:
-						quit = 1;
-						break;
-					case XK_F1:
-					{
-						ToggleFullscreen();
-						break;
-					}
-					default:
-						App_OnKeyDown(text[0]);
-						break;
+				case XK_Escape:
+					quit = 1;
+					break;
+				case XK_F1:
+					ToggleFullscreen();
+					break;
+				case XK_Up:
+					//printf("XK_Up down...\n");
+					App_OnSpecialKeyDown(CS_ARROW_UP);
+					break;
+				case XK_Down:
+					//printf("XK_Down down...\n");
+					App_OnSpecialKeyDown(CS_ARROW_DOWN);
+					break;
+				default:
+					App_OnKeyDown(text[0]);
+					break;
+				}
+			} else if(xev.type == KeyRelease) {
+				XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
+				
+				switch(key) {
+				case XK_Up:
+					//printf("XK_Up release...\n");
+					App_OnSpecialKeyUp(CS_ARROW_UP);
+					break;
+				case XK_Down:
+					//printf("XK_Down release...\n");
+					App_OnSpecialKeyUp(CS_ARROW_DOWN);
+					break;
+				default:
+					break;
 				}
 			}
 		}
