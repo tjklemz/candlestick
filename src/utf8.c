@@ -1,3 +1,4 @@
+#include "utf.h"
 #include <string.h>
 
 typedef unsigned long  stb_uint32;

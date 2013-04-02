@@ -56,6 +56,7 @@ COMMON_SRC = \
   utils.c \
   utf8.c \
   rune.c \
+  keysym2ucs.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2

@@ -45,4 +45,6 @@ char*		utfrrune(char *s, long c);
 char*		utfrune(char *s, long c);
 char*		utfutf(char *s1, char *s2);
 
+char * utf8_from_ucs(char *buffer, int *str, int n);
+
 #endif

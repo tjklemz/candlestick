@@ -24,6 +24,8 @@
 
 #include "opengl.h"
 #include "app.h"
+#include "utf.h"
+#include "keysym2ucs.h"
 
 #include <X11/Xatom.h>
 
@@ -168,7 +170,9 @@ ToggleFullscreen()
 int main(int argc, char *argv[])
 {
 	char text[255];
-	KeySym key;
+	KeySym sym;
+	int ucs;
+	int shifted = 0;
 	
 	CreateWindow();
 	
@@ -186,9 +190,18 @@ int main(int argc, char *argv[])
 				XGetWindowAttributes(dpy, win, &gwa);
 				App_OnResize(gwa.width, gwa.height);
 			} else if(xev.type == KeyPress) {
-				XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
+				//XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
 				
-				switch(key) {
+				sym = XLookupKeysym(&xev.xkey, shifted);
+				
+				//if (ret == 0 && keysym & 0xFF000000 == 0x01000000) {
+				//	ret = unicode_to_utf8(keysym - 0x01000000, buf);
+				//}
+				switch(sym) {
+				case XK_Shift_L:
+				case XK_Shift_R:
+					shifted = 1;
+					break;
 				case XK_Escape:
 					quit = 1;
 					break;
@@ -204,13 +217,26 @@ int main(int argc, char *argv[])
 					App_OnSpecialKeyDown(CS_ARROW_DOWN);
 					break;
 				default:
+					ucs = keysym2ucs(sym);
+					printf("ucs: %d sym: %d\n", ucs, (int)sym);
+					
+					if(ucs < 0) {
+						XLookupString(&xev.xkey, text, sizeof(text), &sym, NULL);
+					} else {
+						utf8_from_ucs(text, &ucs, sizeof(text));
+					}
+					
 					App_OnKeyDown(text[0]);
 					break;
 				}
 			} else if(xev.type == KeyRelease) {
-				XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
-				
-				switch(key) {
+				//XLookupString(&xev.xkey, text, sizeof(text), &key, 0);
+				sym = XLookupKeysym(&xev.xkey, 0);
+				switch(sym) {
+				case XK_Shift_L:
+				case XK_Shift_R:
+					shifted = 0;
+					break;
 				case XK_Up:
 					//printf("XK_Up release...\n");
 					App_OnSpecialKeyUp(CS_ARROW_UP);
