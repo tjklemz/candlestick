@@ -54,6 +54,8 @@ COMMON_SRC = \
   frame.c \
   list.c \
   utils.c \
+  utf8.c \
+  rune.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2

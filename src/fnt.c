@@ -18,270 +18,425 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  **************************************************************************/
 
-#include "fnt.h"
-#include "utils.h"
+/*
+ * A very simple font cache and rasterizer that uses freetype
+ * to draw fonts from a single OpenGL texture. The code uses
+ * a linear-probe hashtable, and writes new glyphs into
+ * the texture using glTexSubImage2D. When the texture fills
+ * up, or the hash table gets too crowded, everything is wiped.
+ *
+ * This is designed to be used for horizontal text only,
+ * and draws unhinted text with subpixel accurate metrics
+ * and kerning. As such, you should always call the drawing
+ * function with an identity transform that maps units
+ * to pixels accurately.
+ *
+ * If you wish to use it to draw arbitrarily transformed
+ * text, change the min and mag filters to GL_LINEAR and
+ * add a pixel of padding between glyphs and rows, and
+ * make sure to clear the texture when wiping the cache.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
-#define GLYPH_SPACING 12
-#define NUM_CHARS 128
+#include "fnt.h"
+#include "opengl.h"
+#include "utf.h"
 
-//defined as Fnt in the interface
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_ADVANCES_H
+/*#include "ft2build.h"
+#include "freetype/freetype.h"
+#include "freetype/ftglyph.h"
+#include "freetype/ftoutln.h"
+#include "freetype/fttrigon.h"
+#include "freetype/ftadvanc.h" */
 
-struct fnt_data {
-	float height;		//in points
+#define PADDING 1		/* set to 0 to save some space but disallow arbitrary transforms */
+
+#define MAXGLYPHS 4093	/* prime number for hash table goodness */
+#define CACHESIZE 256
+#define XPRECISION 4
+#define YPRECISION 1
+
+static inline void die(char *msg)
+{
+	fprintf(stderr, "error: %s\n", msg);
+	exit(1);
+}
+
+struct fnt_t
+{
+	float size;
+	FT_Face face;
 	float line_height;
-	GLuint * textures;	//list of textures
-	GLuint list_base;	//beginning texture id
 };
 
+struct key
+{
+	FT_Face face;
+	short size;
+	short gid;
+	short subx;
+	short suby;
+};
+
+struct glyph
+{
+	char lsb, top, w, h;
+	short s, t;
+	float advance;
+};
+
+struct table
+{
+	struct key key;
+	struct glyph glyph;
+};
+
+static FT_Library g_freetype_lib = NULL;
+static struct table g_table[MAXGLYPHS];
+static int g_table_load = 0;
+static unsigned int g_cache_tex = 0;
+static int g_cache_w = CACHESIZE;
+static int g_cache_h = CACHESIZE;
+static int g_cache_row_y = 0;
+static int g_cache_row_x = 0;
+static int g_cache_row_h = 0;
+
+static void init_font_cache(void)
+{
+	int code;
+
+	code = FT_Init_FreeType(&g_freetype_lib);
+	if (code)
+		die("cannot initialize freetype");
+
+	glGenTextures(1, &g_cache_tex);
+	glBindTexture(GL_TEXTURE_2D, g_cache_tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, g_cache_w, g_cache_h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, NULL);
+}
+
+static void clear_font_cache(void)
+{
+#if PADDING > 0
+	unsigned char *zero = malloc(g_cache_w * g_cache_h);
+	memset(zero, 0, g_cache_w * g_cache_h);
+	glBindTexture(GL_TEXTURE_2D, g_cache_tex);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_cache_w, g_cache_h, GL_ALPHA, GL_UNSIGNED_BYTE, zero);
+	free(zero);
+#endif
+
+	memset(g_table, 0, sizeof(g_table));
+	g_table_load = 0;
+
+	g_cache_row_y = PADDING;
+	g_cache_row_x = PADDING;
+	g_cache_row_h = 0;
+}
+
+static FT_Face load_font(const char *fontname)
+{
+	FT_Face face;
+	int code;
+
+	if (g_freetype_lib == NULL)
+	{
+		init_font_cache();
+		clear_font_cache();
+	}
+
+	code = FT_New_Face(g_freetype_lib, fontname, 0, &face);
+	if (code)
+		die("cannot load font file");
+
+	FT_Select_Charmap(face, ft_encoding_unicode);
+
+	return face;
+}
+
+static void free_font(FT_Face face)
+{
+	clear_font_cache();
+	FT_Done_Face(face);
+}
+
+static unsigned int hashfunc(struct key *key)
+{
+	unsigned char *buf = (unsigned char *)key;
+	unsigned int len = sizeof(struct key);
+	unsigned int h = 0;
+	while (len--)
+		h = *buf++ + (h << 6) + (h << 16) - h;
+	return h;
+}
+
+static unsigned int lookup_table(struct key *key)
+{
+	unsigned int pos = hashfunc(key) % MAXGLYPHS;
+	while (1)
+	{
+		if (!g_table[pos].key.face) /* empty slot */
+			return pos;
+		if (!memcmp(key, &g_table[pos].key, sizeof(struct key))) /* matching slot */
+			return pos;
+		pos = (pos + 1) % MAXGLYPHS;
+	}
+}
+
+static struct glyph * lookup_glyph(FT_Face face, int size, int gid, int subx, int suby)
+{
+	FT_Vector subv;
+	struct key key;
+	unsigned int pos;
+	int code;
+	int w, h;
+
+	/*
+	 * Look it up in the table
+	 */
+
+	key.face = face;
+	key.size = size;
+	key.gid = gid;
+	key.subx = subx;
+	key.suby = suby;
+
+	pos = lookup_table(&key);
+	if (g_table[pos].key.face)
+		return &g_table[pos].glyph;
+
+	/*
+	 * Render the bitmap
+	 */
+
+	glEnd();
+
+	subv.x = subx;
+	subv.y = suby;
+
+	FT_Set_Transform(face, NULL, &subv);
+
+	code = FT_Load_Glyph(face, gid, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING);
+	if (code < 0)
+		return NULL;
+
+	code = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LIGHT);
+	if (code < 0)
+		return NULL;
+
+	w = face->glyph->bitmap.width;
+	h = face->glyph->bitmap.rows;
+
+	/*
+	 * Find an empty slot in the texture
+	 */
+
+	if (g_table_load == (MAXGLYPHS * 3) / 4)
+	{
+		puts("font cache table full, clearing cache");
+		clear_font_cache();
+		pos = lookup_table(&key);
+	}
+
+	if (h + PADDING > g_cache_h || w + PADDING > g_cache_w)
+		die("rendered glyph exceeds cache dimensions");
+
+	if (g_cache_row_x + w + PADDING > g_cache_w)
+	{
+		g_cache_row_y += g_cache_row_h + PADDING;
+		g_cache_row_x = PADDING;
+	}
+	if (g_cache_row_y + h + PADDING > g_cache_h)
+	{
+		puts("font cache texture full, clearing cache");
+		clear_font_cache();
+		pos = lookup_table(&key);
+	}
+
+	/*
+	 * Copy bitmap into texture
+	 */
+
+	memcpy(&g_table[pos].key, &key, sizeof(struct key));
+	g_table[pos].glyph.w = face->glyph->bitmap.width;
+	g_table[pos].glyph.h = face->glyph->bitmap.rows;
+	g_table[pos].glyph.lsb = face->glyph->bitmap_left;
+	g_table[pos].glyph.top = face->glyph->bitmap_top;
+	g_table[pos].glyph.s = g_cache_row_x;
+	g_table[pos].glyph.t = g_cache_row_y;
+	g_table[pos].glyph.advance = face->glyph->advance.x / 64.0;
+	g_table_load ++;
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, face->glyph->bitmap.pitch);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, g_cache_row_x, g_cache_row_y, w, h,
+			GL_ALPHA, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
+	glBegin(GL_QUADS);
+
+	g_cache_row_x += w + PADDING;
+	if (g_cache_row_h < h + PADDING)
+		g_cache_row_h = h + PADDING;
+
+	return &g_table[pos].glyph;
+}
+
+static float draw_glyph(FT_Face face, int size, int gid, float x, float y)
+{
+	struct glyph *glyph;
+	int subx = (x - floor(x)) * XPRECISION;
+	int suby = (y - floor(y)) * YPRECISION;
+	subx = (subx * 64) / XPRECISION;
+	suby = (suby * 64) / YPRECISION;
+
+	glyph = lookup_glyph(face, size, gid, subx, suby);
+	if (!glyph)
+		return 0.0;
+
+	float s0 = (float) glyph->s / g_cache_w;
+	float t0 = (float) glyph->t / g_cache_h;
+	float s1 = (float) (glyph->s + glyph->w) / g_cache_w;
+	float t1 = (float) (glyph->t + glyph->h) / g_cache_h;
+	float xc = floor(x) + glyph->lsb;
+	float yc = floor(y) - glyph->top + glyph->h;
+
+	glTexCoord2f(s0, t0); glVertex2f(xc, yc - glyph->h);
+	glTexCoord2f(s1, t0); glVertex2f(xc + glyph->w, yc - glyph->h);
+	glTexCoord2f(s1, t1); glVertex2f(xc + glyph->w, yc);
+	glTexCoord2f(s0, t1); glVertex2f(xc, yc);
+
+	return glyph->advance;
+}
+
+/*static float measure_string(FT_Face face, float fsize, char *str)
+{
+	int size = fsize * 64;
+	FT_Fixed advance;
+	FT_Vector kern;
+	Rune ucs, gid;
+	float w = 0.0;
+	int left = 0;
+
+	FT_Set_Char_Size(face, size, size, 72, 72);
+
+	while (*str)
+	{
+		str += chartorune(&ucs, str);
+		gid = FT_Get_Char_Index(face, ucs);
+		FT_Get_Advance(face, gid, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING, &advance);
+		w += advance / 65536.0;
+		FT_Get_Kerning(face, left, gid, FT_KERNING_UNFITTED, &kern);
+		w += kern.x / 64.0;
+		left = gid;
+	}
+
+	return w;
+}*/
+
+static float draw_string(FT_Face face, float fsize, float x, float y, char *str, int len)
+{
+	int size = fsize * 64;
+	FT_Vector kern;
+	Rune ucs, gid;
+	int left = 0;
+	//temporary; see NOTE below
+	int i;
+
+	FT_Set_Char_Size(face, size, size, 72, 72);
+
+	glBindTexture(GL_TEXTURE_2D, g_cache_tex);
+	glBegin(GL_QUADS);
+
+	//NOTE: temporary; will change back to while loop; need to refactor Frame
+	//while(*str)
+	for(i = 0; i < len; ++i)
+	{
+		str += chartorune(&ucs, str);
+		gid = FT_Get_Char_Index(face, ucs);
+		x += draw_glyph(face, size, gid, x, y);
+		FT_Get_Kerning(face, left, gid, FT_KERNING_UNFITTED, &kern);
+		x += kern.x / 64.0;
+		left = gid;
+		//printf("(x, y) is... (%f, %f)\n", x, y);
+	}
+
+	glEnd();
+
+	return x;
+}
+
+/**********************************************************************
+ * return the font size in points
+ **********************************************************************/
 float
 Fnt_Size(Fnt * fnt)
 {
-	return GLYPH_SPACING;// + 1 / GLYPH_SPACING;
+	return fnt->size;
 }
 
+/**********************************************************************
+ * returns the line height
+ **********************************************************************/
 float
 Fnt_LineHeight(Fnt * fnt)
 {
 	return fnt->line_height;
 }
 
-
 /**********************************************************************
- * Fnt_MakeGlyphTexture
- * 
- * creates an OpenGL texture from a character glyph
+ * creates a fnt with a given name and height (in points)
  **********************************************************************/
- 
- static 
- void 
- Fnt_MakeGlyphTexture(FT_Bitmap * bitmap, GLuint textureID, GLuint listID)
- {
-	int w = bitmap->width;
-	int h = bitmap->rows;
-	//get the appropriate size for the texture (powers of 2)
-	int w_2 = NextP2(w);
-	int h_2 = NextP2(h);
-
-	int i, j;
-
-	//allocate memory for the texture data.
-	GLubyte * expanded_data = (GLubyte *)malloc(sizeof(GLubyte) * 2 * w_2 * h_2);
-
-	/*
-	 * Here we fill in the data for the expanded bitmap.
-	 * Notice that we are using two channel bitmap (one for luminocity 
-	 * and one for alpha), but we assign both luminocity and alpha 
-	 * to the value that we find in the FreeType bitmap. 
-	 * The value will be 0 if we are in the padding zone, 
-	 * and whatever is in the Freetype bitmap otherwise.
-	 */
-	for(j = 0; j < h_2; ++j) {
-		for(i = 0; i < w_2; ++i) {
-			expanded_data[2 * (i + j * w_2)] = 255;
-			expanded_data[2 * (i + j * w_2) + 1] = 
-				(i >= w || j >= h) ? 0 : bitmap->buffer[i + w * j];
-		}
-	}
-
-	//setup some texture paramaters.
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	
-	//create the texture itself
-	//notice GL_LUMINANCE_ALPHA to indicate 2 channel data
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w_2, h_2, 
-		0, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, expanded_data);
-
-	//have texture, no need for expanded_data
-	free(expanded_data);
- }
- 
- 
- /**********************************************************************
- * Fnt_CreateGlyph
- * 
- * creates the glyph from the given fnt face and character
- **********************************************************************/
- 
- static 
- FT_Glyph 
- Fnt_CreateGlyph(FT_Face face, char ch)
- {
-	FT_Glyph glyph;
-	unsigned long ci = FT_Get_Char_Index(face, ch);
-	
-	//load the glyph for the character
-	if(FT_Load_Glyph(face, ci, FT_LOAD_RENDER)) {
-		printf("FT_Load_Glyph failed");
-		exit(1);
-	}
-
-	//move the face's glyph into a Glyph object.
-	if(FT_Get_Glyph(face->glyph, &glyph)) {
-		printf("FT_Get_Glyph failed");
-		exit(1);
-	}
-	
-	return glyph;
- }
-
-/**********************************************************************
- * Fnt_MakeDisplayList
- * 
- * creates an OpenGL display list correspending to the passed in char
- **********************************************************************/
-
-static 
-void 
-Fnt_MakeDisplayList(Fnt * fnt, FT_Face face, char ch, GLuint list_base, GLuint * tex_base)
+Fnt*
+Fnt_Init(const char * fname, unsigned int size, float line_height)
 {
-	GLuint textureID = tex_base[(int)ch];
-	GLuint listID = list_base + (GLuint)ch;
-	float x, y;
-
-	FT_Glyph glyph = Fnt_CreateGlyph(face, ch);
-	FT_BitmapGlyph bitmap_glyph;
-	FT_Bitmap * bitmap;
-
-	FT_Glyph_To_Bitmap(&glyph, ft_render_mode_normal, 0, 1);
-	bitmap_glyph = (FT_BitmapGlyph)glyph;
-	bitmap = &bitmap_glyph->bitmap;
-	
-	Fnt_MakeGlyphTexture(bitmap, textureID, listID);
-	
-	glNewList(listID, GL_COMPILE);
-		glBindTexture(GL_TEXTURE_2D, textureID);
-
-		glPushMatrix();
-			/*
-			 * Places the character horizontally (i.e. centers the character image
-			 * in the bounding box. The bounding box is placed correctly, but the
-			 * actual character, for it to look right, must be moved into the center,
-			 * since some characters take up different amounts of space or are
-			 * placed/positioned differently in that bounding box.)
-			 *
-			 * Also places the character vertically, for similar reasons,
-			 * namely that of the ascenders and descender.
-			 */
-			glTranslatef((float)bitmap_glyph->left, (float)(bitmap_glyph->top - bitmap->rows), 0);
-
-			//take into account any empty padding space for the texture
-			x = (float)bitmap->width / (float)NextP2(bitmap->width);
-			y = (float)bitmap->rows / (float)NextP2(bitmap->rows);
-
-			//draw the texture mapped quads; orient the FreeType bitmap properly
-			glBegin(GL_QUADS);
-				glTexCoord2d(0, 0); glVertex2i(0, bitmap->rows);
-				glTexCoord2d(0, y); glVertex2i(0, 0);
-				glTexCoord2d(x, y); glVertex2i(bitmap->width, 0);
-				glTexCoord2d(x, 0); glVertex2i(bitmap->width, bitmap->rows);
-			glEnd();
-		glPopMatrix();
-		
-		//glTranslatef((float)(face->glyph->advance.x >> 6) , 0, 0);
-		//NOTE: must move an integer amount, otherwise weird artifacts
-		//should also be constant for monospace fnt
-		glTranslatef(GLYPH_SPACING, 0, 0);
-
-	glEndList();
-	
-	FT_Done_Glyph(glyph);
-}
-
-
-/**********************************************************************
- * Fnt_Init
- * 
- * creates a fnt from the specified fnt name and height
- **********************************************************************/
-
-Fnt* 
-Fnt_Init(const char * fname, unsigned int height, float line_height) 
-{
-	FT_Library library;
-	FT_Face face;
-	unsigned char ch;
-
 	Fnt * fnt = (Fnt *)malloc(sizeof(Fnt));
 	
-	fnt->textures = (GLuint *)malloc(sizeof(GLuint) * NUM_CHARS);
-	fnt->height = (float)height;
-	fnt->line_height = (float)fnt->height * line_height;
-
-	if (FT_Init_FreeType(&library)) { 
-		printf("FT_Init_FreeType failed. Something's wrong with FreeType");
-		exit(1);
-	}
-	if (FT_New_Face(library, fname, 0, &face )) {
-		printf("FT_New_Face failed. Couldn't load %s", fname);
-		exit(1);
-	}
-
-	//FreeType measures fnt size in terms of 1/64ths of pixels.
-	//Thus, to make a fnt h pixels high, we need to request a size of h*64.
-	// (h << 6 is just a prettier way of writting h*64)
-	FT_Set_Char_Size(face, height << 6, height << 6, 96, 96);
-
-	fnt->list_base = glGenLists(NUM_CHARS);
-	glGenTextures(NUM_CHARS, fnt->textures );
-
-	//This is where we actually create each of the fnts display lists.
-	for(ch = 0; ch < NUM_CHARS; ++ch) {
-		Fnt_MakeDisplayList(fnt, face, ch, fnt->list_base, fnt->textures);
-	}
-
-	//display lists are created; don't need the fnt face or library
-	FT_Done_Face(face);
-	FT_Done_FreeType(library);
+	fnt->size = size;
+	fnt->line_height = line_height;
+	fnt->face = load_font(fname);
 	
 	return fnt;
 }
 
-
 /**********************************************************************
- * Fnt_Destroy
- * 
- * destroys and cleans up the specified fnt
+ * destroys the fnt (destructor)
  **********************************************************************/
- 
-void 
-Fnt_Destroy(Fnt * fnt) 
+void
+Fnt_Destroy(Fnt * fnt)
 {
-	//list_base
-	glDeleteLists(fnt->list_base, NUM_CHARS);
-	//textures
-	glDeleteTextures(NUM_CHARS, fnt->textures);
-	free(fnt->textures);
-	//height
-	fnt->height = 0;
-	//the thing itself
+	free_font(fnt->face);
 	free(fnt);
-	fnt = NULL;
+	fnt = 0;
 }
 
-
 /**********************************************************************
- * Fnt_Print
- * 
- * the print function in all its glory; prints using the fnt
+ * prints text at window coords (x,y) using the fnt
  **********************************************************************/
 
 void
 Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 {
-	GLuint flist = fnt->list_base;
-	float h = fnt->line_height;
 	float modelview_matrix[16];
+	
 	Line * cur_line;
 	int line = 0;
 	int len = 0;
-
+	float h = fnt->line_height;
+	FT_Face f = fnt->face;
+	float s = fnt->size;
+	
+	char * bob = "Hi, bob";
+	
 	//print using screen coords
 	PushScreenCoordMat();
 
@@ -294,47 +449,27 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	
 
-	glListBase(flist);
+	//glListBase(flist);
 
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
 	
 	glPushMatrix();
 	
-	Frame_IterEnd(frm);
+	/*Frame_IterEnd(frm);
 	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
 		len = Line_Length(cur_line);
-		glLoadIdentity();
-		glTranslatef((float)x, (float)y + h*line, 0);
-		glMultMatrixf(modelview_matrix);
-		glCallLists(len, GL_UNSIGNED_BYTE, Line_Text(cur_line));
+		
+		draw_string(f, s, (float)x, (float)y + h*line, Line_Text(cur_line), len);
+		
 		++line;
-	}
+	}*/
+	//printf("(x, y) is... (%d, %d)\n", x, y);
+	draw_string(f, s, (float)x, (float)y, bob, strlen(bob));
 	
 	glPopMatrix();
 	
 	glPopAttrib();
 	
-	/*********************************
-	 * display cursor
-	 *********************************/
-	
-	if(show_cursor) {
-		Frame_IterEnd(frm);
-		cur_line = Frame_IterPrev(frm);
-		len = Line_Length(cur_line);
-		glPushMatrix();
-			//glColor3f(0.2f, 0.2f, 0.2f);
-			glLoadIdentity();
-			glTranslatef((float)x + len*GLYPH_SPACING, (float)y, 0);
-			glMultMatrixf(modelview_matrix);
-			glBegin(GL_LINES);
-				glVertex2i(0, 0);
-				glVertex2i(GLYPH_SPACING, 0);
-			glEnd();
-		glPopMatrix();
-	}
-
 	//go back to world coords
 	PopScreenCoordMat();
-} 
-
+}

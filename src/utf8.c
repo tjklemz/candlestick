@@ -1,3 +1,8 @@
+#include <string.h>
+
+typedef unsigned long  stb_uint32;
+
+
 int * ucs_from_utf8(int *buffer, char *str, int n)
 {
     stb_uint32 c;

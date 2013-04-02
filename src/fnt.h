@@ -22,38 +22,33 @@
 #ifndef MY_FONT_H
 #define MY_FONT_H
 
-#include "opengl.h"
 #include "frame.h"
 
-//FreeType Headers
-#include "ft2build.h"
-#include "freetype/freetype.h"
-#include "freetype/ftglyph.h"
-#include "freetype/ftoutln.h"
-#include "freetype/fttrigon.h"
-
-typedef struct fnt_data Fnt;
+typedef struct fnt_t Fnt;
 
 /**********************************************************************
  * return the font size in points
  **********************************************************************/
-float Fnt_Size(Fnt * fnt);
+float
+Fnt_Size(Fnt * fnt);
 
 /**********************************************************************
  * returns the line height
  **********************************************************************/
-float Fnt_LineHeight(Fnt * fnt);
+float
+Fnt_LineHeight(Fnt * fnt);
 
 /**********************************************************************
- * creates a fnt with a given name and height (in points)
+ * creates a fnt with a given name and size (in points)
  **********************************************************************/
 Fnt*
-Fnt_Init(const char * fname, unsigned int height, float line_height);
+Fnt_Init(const char * fname, unsigned int size, float line_height);
 
 /**********************************************************************
  * destroys the fnt (destructor)
  **********************************************************************/
-void Fnt_Destroy(Fnt * fnt);
+void
+Fnt_Destroy(Fnt * fnt);
 
 /**********************************************************************
  * prints text at window coords (x,y) using the fnt

@@ -22,6 +22,8 @@
 
 #include "opengl.h"
 
+#include <math.h>
+
 /**********************************************************************
  * nextP2
  * 
@@ -55,7 +57,8 @@ PushScreenCoordMat()
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 		glLoadIdentity();
-		gluOrtho2D(viewport[0],viewport[2],viewport[1],viewport[3]);
+		//gluOrtho2D(viewport[0],viewport[2],viewport[1],viewport[3]);
+		gluOrtho2D(viewport[1], viewport[2], viewport[3], viewport[0]);
 	//the matrix is now on the stack and setup; leave it
 	glPopAttrib();
 }
