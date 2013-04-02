@@ -45,6 +45,7 @@
 #include "fnt.h"
 #include "opengl.h"
 #include "utf.h"
+#include "utils.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -71,6 +72,7 @@ static inline void die(char *msg)
 
 struct fnt_t
 {
+	float w; //character width of 'M'
 	float size;
 	FT_Face face;
 	float line_height;
@@ -385,6 +387,35 @@ Fnt_Size(Fnt * fnt)
 }
 
 /**********************************************************************
+ * return the font character width
+ **********************************************************************/
+static
+void
+Fnt_CalcWidth(Fnt * fnt)
+{
+	int size = fnt->size * 64;
+	FT_Fixed advance;
+	FT_Vector kern;
+	Rune gid;
+	float w = 0.0f;
+
+	FT_Set_Char_Size(fnt->face, size, size, 72, 72);
+	gid = FT_Get_Char_Index(fnt->face, 'M');
+	FT_Get_Advance(fnt->face, gid, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING, &advance);
+	w += advance / 65536.0;
+	FT_Get_Kerning(fnt->face, 0, gid, FT_KERNING_UNFITTED, &kern);
+	w += kern.x / 64.0;
+
+	fnt->w = w;
+}
+
+float
+Fnt_Width(Fnt * fnt)
+{
+	return fnt->w;
+}
+
+/**********************************************************************
  * returns the line height
  **********************************************************************/
 float
@@ -404,6 +435,8 @@ Fnt_Init(const char * fname, unsigned int size, float line_height)
 	fnt->size = size;
 	fnt->line_height = line_height;
 	fnt->face = load_font(fname);
+	
+	Fnt_CalcWidth(fnt);
 	
 	return fnt;
 }
@@ -431,11 +464,9 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	Line * cur_line;
 	int line = 0;
 	int len = 0;
-	float h = fnt->line_height;
+	float h = fnt->line_height * 1.5 * fnt->w;
 	FT_Face f = fnt->face;
 	float s = fnt->size;
-	
-	char * bob = "Hi, bob";
 	
 	//print using screen coords
 	PushScreenCoordMat();
@@ -455,16 +486,14 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	
 	glPushMatrix();
 	
-	/*Frame_IterEnd(frm);
+	Frame_IterEnd(frm);
 	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
 		len = Line_Length(cur_line);
 		
-		draw_string(f, s, (float)x, (float)y + h*line, Line_Text(cur_line), len);
+		draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line), len);
 		
 		++line;
-	}*/
-	//printf("(x, y) is... (%d, %d)\n", x, y);
-	draw_string(f, s, (float)x, (float)y, bob, strlen(bob));
+	}
 	
 	glPopMatrix();
 	

@@ -187,10 +187,10 @@ void
 Disp_Render(Frame * frm)
 {	
 	//window coords for start of frame
-	float fnt_size = Fnt_Size(fnt_reg);
+	float fnt_width = Fnt_Width(fnt_reg);
 	float line_height = Fnt_LineHeight(fnt_reg);
-	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_size)) / 2);
-	printf("disp_x: %f, disp_w: %d, fnt_size: %f\n", disp_x, disp_w, fnt_size);
+	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_width)) / 2);
+	//printf("disp_x: %f, disp_w: %d, fnt_width: %f\n", disp_x, disp_w, fnt_width);
 	float disp_y = disp_h / 2;
 	int num_lines;
 	int first_line;
