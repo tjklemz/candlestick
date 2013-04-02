@@ -45,7 +45,10 @@ typedef struct {
 	scrolling_dir_t dir;
 } scrolling_t;
 
-static scrolling_t scroll;
+// Initialize the scroll amount values here, instead of in Init.
+// This way, the Disp can be recreated without reseting the scroll.
+static scrolling_t scroll = {0, 0.0f, SCROLL_UP};
+
 static int scroll_requested = 0;
 static anim_del_t * anim_del = 0;
 
@@ -79,6 +82,8 @@ Disp_UpdateScroll(float amt, float limit)
 {
 	if(scroll.amt + amt < limit) {
 		scroll.amt += amt;
+	} else {
+		scroll.amt = limit;
 	}
 	
 	if(scroll.amt < 0) {
@@ -160,8 +165,7 @@ void
 Disp_Init(int fnt_size)
 {
 	scroll.moving = 0;
-	scroll.amt = 0.0f;
-	scroll.dir = SCROLL_UP;
+	scroll_requested = 0;
 	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
 
@@ -188,7 +192,7 @@ Disp_Render(Frame * frm)
 {	
 	//window coords for start of frame
 	float fnt_width = Fnt_Width(fnt_reg);
-	float line_height = Fnt_LineHeight(fnt_reg);
+	float line_height = Fnt_LineHeight(fnt_reg) * 1.5 * fnt_width;
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_width)) / 2);
 	//printf("disp_x: %f, disp_w: %d, fnt_width: %f\n", disp_x, disp_w, fnt_width);
 	float disp_y = disp_h / 2;
@@ -227,7 +231,8 @@ Disp_Render(Frame * frm)
 	Frame_SetEnd(frm, first_line);
 	
 	// scroll the display appropriately, minus the part that isn't viewable
-	disp_y = disp_y - line_height * (scroll.amt - first_line + 1);
+	// NOTE: (0, 0) in screen coords is now the top left of the window
+	disp_y = disp_y - line_height * (-scroll.amt + first_line - 1);
 	
 	//printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
 	

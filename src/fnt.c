@@ -50,14 +50,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_ADVANCES_H
-/*#include "ft2build.h"
-#include "freetype/freetype.h"
-#include "freetype/ftglyph.h"
-#include "freetype/ftoutln.h"
-#include "freetype/fttrigon.h"
-#include "freetype/ftadvanc.h" */
 
-#define PADDING 1		/* set to 0 to save some space but disallow arbitrary transforms */
+#define PADDING 0		/* set to 0 to save some space but disallow arbitrary transforms */
 
 #define MAXGLYPHS 4093	/* prime number for hash table goodness */
 #define CACHESIZE 256
@@ -169,6 +163,9 @@ static void free_font(FT_Face face)
 {
 	clear_font_cache();
 	FT_Done_Face(face);
+	FT_Done_FreeType(g_freetype_lib);
+	g_freetype_lib = NULL;
+	glDeleteTextures(1, &g_cache_tex);
 }
 
 static unsigned int hashfunc(struct key *key)
@@ -369,7 +366,6 @@ static float draw_string(FT_Face face, float fsize, float x, float y, char *str,
 		FT_Get_Kerning(face, left, gid, FT_KERNING_UNFITTED, &kern);
 		x += kern.x / 64.0;
 		left = gid;
-		//printf("(x, y) is... (%f, %f)\n", x, y);
 	}
 
 	glEnd();
