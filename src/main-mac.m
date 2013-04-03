@@ -216,7 +216,9 @@ static void stopTimer()
 		break;
 	default:
 		{
-			char character = [[anEvent charactersIgnoringModifiers] characterAtIndex:0];
+			char character[255];
+			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
+			strcpy(character, key);
 			App_OnKeyDown(character);
 		}
 	    break;
