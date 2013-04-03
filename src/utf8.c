@@ -82,3 +82,59 @@ char * utf8_from_ucs(char *buffer, int *str, int n)
     buffer[i] = 0;
     return buffer;
 }
+
+
+/*
+ *  Copyright (c) 2009 Public Software Group e. V., Berlin, Germany
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a
+ *  copy of this software and associated documentation files (the "Software"),
+ *  to deal in the Software without restriction, including without limitation
+ *  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *  and/or sell copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ *  DEALINGS IN THE SOFTWARE.
+ */
+ 
+ // Taken from utf8proc.c
+
+int utf8proc_encode_char(int32_t uc, char * dst)
+{
+  if (uc < 0x00) {
+    return 0;
+  } else if (uc < 0x80) {
+    dst[0] = uc;
+    return 1;
+  } else if (uc < 0x800) {
+    dst[0] = 0xC0 + (uc >> 6);
+    dst[1] = 0x80 + (uc & 0x3F);
+    return 2;
+  } else if (uc == 0xFFFF) {
+    dst[0] = 0xFF;
+    return 1;
+  } else if (uc == 0xFFFE) {
+    dst[0] = 0xFE;
+    return 1;
+  } else if (uc < 0x10000) {
+    dst[0] = 0xE0 + (uc >> 12);
+    dst[1] = 0x80 + ((uc >> 6) & 0x3F);
+    dst[2] = 0x80 + (uc & 0x3F);
+    return 3;
+  } else if (uc < 0x110000) {
+    dst[0] = 0xF0 + (uc >> 18);
+    dst[1] = 0x80 + ((uc >> 12) & 0x3F);
+    dst[2] = 0x80 + ((uc >> 6) & 0x3F);
+    dst[3] = 0x80 + (uc & 0x3F);
+    return 4;
+  } else return 0;
+}

@@ -106,9 +106,9 @@ App_OnSpecialKeyDown(cs_key_t key)
 
 static
 void
-App_OnChar(char key)
+App_OnChar(char * key)
 {
-	switch(key) {
+	switch(key[0]) {
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
@@ -124,16 +124,13 @@ App_OnChar(char key)
 		Frame_InsertNewLine(frm);
 		break;
 	default:
-		//backspace
-		if(key >= 32) {
-			Frame_InsertCh(frm, key);
-		}
+		Frame_InsertCh(frm, key);
 		break;
 	}
 }
 
 void
-App_OnKeyDown(char key)
+App_OnKeyDown(char * key)
 {
 	Disp_ScrollReset();
 	App_OnChar(key);
@@ -172,7 +169,8 @@ static
 void
 App_Read(FILE * file)
 {
-	//char c;
+	//has to be re-written to handle utf8
+/*
 	char * buffer;
 	long len;
 	size_t result;
@@ -208,9 +206,10 @@ App_Read(FILE * file)
 	
 	free(buffer);
 	
-	/*while((c = fgetc(file)) != EOF) {
+	while((c = fgetc(file)) != EOF) {
 		App_OnChar(c);
-	}*/
+	}
+*/
 }
 
 void

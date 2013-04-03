@@ -39,25 +39,12 @@ typedef enum line_end_type {
 } LINE_END;
 
 struct line_type {
-	char text[CHARS_PER_LINE];
-	int len;
-	int size;
+	char * text;   //dynamic array
+	int len;       //points to the next insert place (bytes)
+	int size;      //current size (bytes)
+	int num_chars; //number of unicode chars (not bytes)
 	LINE_END end;
 };
-
-int
-Line_Length(Line * line)
-{
-	return line->len;
-}
-
-static
-void
-Line_SetLength(Line * line, int len)
-{
-	assert(len <= line->size);
-	line->len = len;
-}
 
 //should rename to Line_TextRaw or something
 char*
@@ -68,11 +55,14 @@ Line_Text(Line * line)
 
 static
 Line*
-Line_CreateLine(int size)
+Line_Init(int init_size)
 {
 	Line * line = (Line *)malloc(sizeof(Line));
-	line->size = size;
+	line->text = (char *)calloc(init_size + 1, sizeof(char));
+	line->text[0] = '\0';
+	line->size = init_size + 1;
 	line->len = 0;
+	line->num_chars = 0;
 	line->end = SOFT;
 	
 	return line;
@@ -82,6 +72,7 @@ static
 void
 Line_Destroy(Line * line)
 {
+	free(line->text);
 	free(line);
 	
 	line = NULL;
@@ -89,11 +80,22 @@ Line_Destroy(Line * line)
 
 static
 void
-Line_InsertCh(Line * line, char ch)
+Line_InsertCh(Line * line, char * ch)
 {
-	if(line->len < line->size) {
-		line->text[line->len] = ch;
-		line->len += 1;
+	if(*ch) {
+		printf("strlen: %d\n", (int)strlen(ch));
+		for(; *ch; ++ch) {
+			if(line->len == line->size - 1) {
+				printf("oh ya, realloc...\n");
+				line->text = (char *)realloc(line->text, (line->size + 1)*sizeof(char));
+				line->size += 1;
+			}
+			line->text[line->len] = *ch;
+			line->len += 1;
+			line->text[line->len] = '\0';
+		}
+		
+		line->num_chars += 1; //inserted one unicode character
 	}
 }
 
@@ -101,8 +103,30 @@ static
 void
 Line_DeleteCh(Line * line)
 {
-	if(line->len > 0) {
-		line->len -= 1;
+	int cur = line->len;
+	
+	if(cur > 0) {
+		char cur_byte;
+		char prev_byte;
+		//if the current byte is negative, then it is unicode
+		// so move to the appropriate position
+		do {
+			--cur;
+			
+			prev_byte = line->text[cur-1];
+			cur_byte = line->text[cur];
+			
+			if(cur_byte < 0 && !(cur_byte & (1 << 6))) {
+				cur_byte = -1; //(1 << 7);
+			}
+			if(prev_byte < 0 && !(prev_byte & (1 << 6))) {
+				prev_byte = -1; //(1 << 7);
+			}
+		} while(cur > 0 && cur_byte < 0 && prev_byte <= cur_byte);
+		
+		line->len = cur;
+		line->text[cur] = '\0';
+		line->num_chars -= 1; //deleted one unicode character
 	}
 }
 
@@ -111,11 +135,10 @@ void
 Frame_AddLine(Frame * frm)
 {
 	Node * new_line = Node_Init();
-	new_line->data = Line_CreateLine(CHARS_PER_LINE);
+	new_line->data = Line_Init(CHARS_PER_LINE);
 	Node_Append(frm->cur_line, new_line);
 	
 	frm->cur_line = frm->cur_line->next;
-	
 	frm->num_lines += 1;
 }
 
@@ -146,7 +169,7 @@ Frame_Init()
 {
 	Frame * frm = (Frame *)malloc(sizeof(Frame));
 	frm->lines = Node_Init();
-	frm->lines->data = Line_CreateLine(CHARS_PER_LINE);
+	frm->lines->data = Line_Init(CHARS_PER_LINE);
 	frm->cur_line = frm->lines;
 	frm->num_lines = 1;
 	frm->iter_end = 1;
@@ -174,7 +197,7 @@ Frame_Destroy(Frame * frm)
 //SoftWrap assumes current line is full
 // Calls Frame_AddLine
 
-static
+/*static
 void
 Frame_SoftWrap(Frame * frm)
 {
@@ -208,12 +231,12 @@ Frame_SoftWrap(Frame * frm)
 		Line_SetLength(new_line, wrap_amount);
 		//printf("New new_line len: %d\n", wrap_amount);
 	}
-}
+}*/
 
 //if there's room on the previous line, tries to do soft wrap
 //assumes that the current line has at least one character
 //Will call Frame_DeleteLine if undoes the soft wrap
-static
+/*static
 void
 Frame_UndoSoftWrap(Frame * frm)
 {
@@ -245,14 +268,25 @@ Frame_UndoSoftWrap(Frame * frm)
 			}
 		}
 	}
-}
+}*/
 
 void
-Frame_InsertCh(Frame * frm, char ch)
-{
+Frame_InsertCh(Frame * frm, char * ch)
+{	
 	Line * cur_line = (Line *)frm->cur_line->data;
 	
-	if(cur_line->len < cur_line->size) {
+	if(cur_line->num_chars < CHARS_PER_LINE) {
+		Line_InsertCh(cur_line, ch);
+	} else {
+		cur_line->end = SOFT;
+		
+		Frame_AddLine(frm);
+		
+		cur_line = (Line *)frm->cur_line->data;
+		Line_InsertCh(cur_line, ch);
+	}
+	
+	/*if(cur_line->len < cur_line->size) {
 		Line_InsertCh(cur_line, ch);
 	} else {
 		//reached the end of the line, make sure it is soft
@@ -265,7 +299,7 @@ Frame_InsertCh(Frame * frm, char ch)
 		} else {
 			Frame_AddLine(frm);
 		}
-	}
+	}*/
 }
 
 void
@@ -275,9 +309,6 @@ Frame_DeleteCh(Frame * frm)
 	
 	if(cur_line->len > 0) {
 		Line_DeleteCh(cur_line);
-		if(cur_line->len > 0) {
-			Frame_UndoSoftWrap(frm);
-		}
 	} else {
 		Frame_DeleteLine(frm);
 	}
@@ -295,10 +326,8 @@ Frame_InsertNewLine(Frame * frm)
 void
 Frame_InsertTab(Frame * frm)
 {
-	int i;
-	for(i = 0; i < 4; ++i) {
-		Frame_InsertCh(frm, ' ');
-	}
+	static char * tab = "\x20\x20\x20\x20";
+	Frame_InsertCh(frm, tab);
 }
 
 
@@ -379,14 +408,6 @@ Frame_IterPrev(Frame * frm)
 #define SOFT_CHAR ' '
 #define HARD_CHAR '\n'
 
-//The implemenation of this needs to change so that
-// Frame doesn't have to worry about Files. (?) <-- Necessary? Or over-engineering it?
-//It should work just like how Fnt displays the Frame
-// (as far as interfacing with Frame).
-//OR have a method that takes a function pointer OnLine()?
-//The problem really is that Frame does not store the EOL character.
-//Should this change? Then this breaks Fnt.c (display code)
-
 void
 Frame_Write(Frame * frm, FILE * file)
 {
@@ -398,7 +419,7 @@ Frame_Write(Frame * frm, FILE * file)
 	Frame_IterBegin(frm);
 	
 	while((cur_line = Frame_IterNext(frm))) {
-		len = Line_Length(cur_line);
+		len = cur_line->len;
 		
 		//flush the buffer if it is full (+1 because of EOL character)
 		if(ptr + len + EOL_SIZE >= BUF_SIZE) {
@@ -406,7 +427,7 @@ Frame_Write(Frame * frm, FILE * file)
 			ptr = 0;
 		}
 		
-		memcpy(&buf[ptr], Line_Text(cur_line), len * sizeof(char));
+		memcpy(&buf[ptr], cur_line->text, len * sizeof(char));
 		
 		ptr += len;
 		

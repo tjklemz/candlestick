@@ -64,7 +64,7 @@ void
 Frame_Destroy(Frame * frm);
 
 void
-Frame_InsertCh(Frame * frm, char ch);
+Frame_InsertCh(Frame * frm, char * ch);
 
 void
 Frame_DeleteCh(Frame * frm);

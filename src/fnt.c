@@ -342,23 +342,19 @@ static float draw_glyph(FT_Face face, int size, int gid, float x, float y)
 	return w;
 }*/
 
-static float draw_string(FT_Face face, float fsize, float x, float y, char *str, int len)
+static float draw_string(FT_Face face, float fsize, float x, float y, char *str)
 {
 	int size = fsize * 64;
 	FT_Vector kern;
 	Rune ucs, gid;
 	int left = 0;
-	//temporary; see NOTE below
-	int i;
 
 	FT_Set_Char_Size(face, size, size, 72, 72);
 
 	glBindTexture(GL_TEXTURE_2D, g_cache_tex);
 	glBegin(GL_QUADS);
 
-	//NOTE: temporary; will change back to while loop; need to refactor Frame
-	//while(*str)
-	for(i = 0; i < len; ++i)
+	while(*str)
 	{
 		str += chartorune(&ucs, str);
 		gid = FT_Get_Char_Index(face, ucs);
@@ -459,7 +455,6 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	
 	Line * cur_line;
 	int line = 0;
-	int len = 0;
 	float h = fnt->line_height * 1.5 * fnt->w;
 	FT_Face f = fnt->face;
 	float s = fnt->size;
@@ -484,10 +479,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	
 	Frame_IterEnd(frm);
 	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
-		len = Line_Length(cur_line);
-		
-		draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line), len);
-		
+		draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line));
 		++line;
 	}
 	
