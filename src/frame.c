@@ -20,6 +20,7 @@
 
 #include "frame.h"
 #include "list.h"
+#include "utf.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -197,41 +198,39 @@ Frame_Destroy(Frame * frm)
 //SoftWrap assumes current line is full
 // Calls Frame_AddLine
 
-/*static
+static
 void
 Frame_SoftWrap(Frame * frm)
 {
 	int i;
-	int wrap_amount;
 	Line * full_line;
 	Line * new_line;
 	
 	full_line = (Line *)frm->cur_line->data;
 	
-	assert(full_line->len == full_line->size);
-	
 	Frame_AddLine(frm);
 	
 	new_line = (Line *)frm->cur_line->data;
 	
-	i = full_line->len - 1;
-	while(full_line->text[i] != ' ' && i > 0) {
+	i = full_line->len;
+	while(i > 0 && full_line->text[i] != ' ') {
 		--i;
 	}
 	
 	//make sure it is worth wrapping (greater than zero)
 	if(i > 0) {
-		//printf("New full_line len: %d\n", i);
-		Line_SetLength(full_line, i);
+		// i now points to the space character, so chop off there
+		full_line->text[i] = '\0';
+		full_line->len = i;
 		
-		wrap_amount = full_line->size - i - 1;
+		++i;
 		
-		memcpy(new_line->text, &full_line->text[i+1], wrap_amount*sizeof(char));
+		full_line->size = strlen(&full_line->text[i]);
+		full_line->num_chars = utflen(&full_line->text[i]);
 		
-		Line_SetLength(new_line, wrap_amount);
-		//printf("New new_line len: %d\n", wrap_amount);
+		Line_InsertCh(new_line, &full_line->text[i]);
 	}
-}*/
+}
 
 //if there's room on the previous line, tries to do soft wrap
 //assumes that the current line has at least one character
@@ -280,26 +279,14 @@ Frame_InsertCh(Frame * frm, char * ch)
 	} else {
 		cur_line->end = SOFT;
 		
-		Frame_AddLine(frm);
-		
-		cur_line = (Line *)frm->cur_line->data;
-		Line_InsertCh(cur_line, ch);
-	}
-	
-	/*if(cur_line->len < cur_line->size) {
-		Line_InsertCh(cur_line, ch);
-	} else {
-		//reached the end of the line, make sure it is soft
-		cur_line->end = SOFT;
-		
-		if(ch != ' ') {
+		if(*ch == ' ') {
+			Frame_AddLine(frm);
+		} else {
 			Frame_SoftWrap(frm);
 			cur_line = (Line *)frm->cur_line->data;
 			Line_InsertCh(cur_line, ch);
-		} else {
-			Frame_AddLine(frm);
 		}
-	}*/
+	}
 }
 
 void
@@ -326,7 +313,7 @@ Frame_InsertNewLine(Frame * frm)
 void
 Frame_InsertTab(Frame * frm)
 {
-	static char * tab = "\x20\x20\x20\x20";
+	static char * tab = "\x20\x20\x20\x20"; //four spaces
 	Frame_InsertCh(frm, tab);
 }
 

@@ -59,7 +59,7 @@ Rune		tolowerrune(Rune c);
 Rune		totitlerune(Rune c);
 Rune		toupperrune(Rune c);
 char*		utfecpy(char *to, char *e, char *from);
-int		utflen(const char *s);
+int		utflen(char *s);
 int		utfnlen(const char *s, long m);
 char*		utfrrune(char *s, long c);
 char*		utfrune(char *s, long c);
