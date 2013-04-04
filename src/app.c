@@ -21,6 +21,7 @@
 #include "app.h"
 #include "disp.h"
 #include "frame.h"
+#include "utf.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,9 +107,9 @@ App_OnSpecialKeyDown(cs_key_t key)
 
 static
 void
-App_OnChar(char * key)
+App_OnChar(char * ch)
 {
-	switch(key[0]) {
+	switch(ch[0]) {
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
@@ -124,7 +125,7 @@ App_OnChar(char * key)
 		Frame_InsertNewLine(frm);
 		break;
 	default:
-		Frame_InsertCh(frm, key);
+		Frame_InsertCh(frm, ch);
 		break;
 	}
 }
@@ -169,12 +170,13 @@ static
 void
 App_Read(FILE * file)
 {
-	//has to be re-written to handle utf8
-/*
 	char * buffer;
+	char ch[7];
 	long len;
 	size_t result;
 	long i;
+	Rune rune;
+	int size;
 	
 	//empty the current frame so we can fill it
 	Frame_Destroy(frm);
@@ -186,19 +188,34 @@ App_Read(FILE * file)
 	
 	buffer = (char *)malloc(sizeof(char) * len);
 	if (!buffer) {
-		fputs("Memory error", stderr); 
+		fputs("Memory error for App_Read", stderr); 
 		exit(2);
 	}
 	
 	printf("Got mem, now reading...\n");
+	
 	result = fread(buffer, 1, len, file);
 	if(result != len) {
-		fputs("Reading error", stderr);
+		fputs("Reading error for App_Read", stderr);
 		exit(3);
 	}
+	
 	printf("Read into mem, now filling the frame with len: %ld\n", len);
-	for(i = 0; i < len; ++i) {
-		App_OnChar(buffer[i]);
+	
+	for(i = 0; i < len; i += size) {
+		chartorune(&rune, &buffer[i]);
+		
+		if(rune == Runeerror) {
+			fputs("Bad things happened! Error parsing file as UTF-8.", stderr);
+			break;
+		}
+		
+		size = runetochar(ch, &rune);
+		ch[size] = '\0';
+		
+		printf("Got char of size: %d\n", size);
+		
+		App_OnChar(ch);
 		if(i % 4096 == 0) {
 			printf("Filled %ld bytes...\n", i);
 		}
@@ -206,10 +223,9 @@ App_Read(FILE * file)
 	
 	free(buffer);
 	
-	while((c = fgetc(file)) != EOF) {
+	/*while((c = fgetc(file)) != EOF) {
 		App_OnChar(c);
-	}
-*/
+	}*/
 }
 
 void
