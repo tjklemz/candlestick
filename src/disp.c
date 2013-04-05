@@ -202,7 +202,7 @@ Disp_Render(Frame * frm)
 	
 	// if scrolling, update the animation
 	if(scroll.moving || scroll_requested) {
-		float limit = Frame_NumLines(frm) - (1 - STEP_AMT);
+		float limit = Frame_NumLines(frm) - 1; //(1 - STEP_AMT);
 		
 		switch(scroll.dir) {
 		case SCROLL_UP:

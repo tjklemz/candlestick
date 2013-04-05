@@ -84,10 +84,10 @@ void
 Line_InsertCh(Line * line, char * ch)
 {
 	if(*ch) {
-		printf("strlen: %d\n", (int)strlen(ch));
+		//printf("strlen: %d\n", (int)strlen(ch));
 		for(; *ch; ++ch) {
 			if(line->len == line->size - 1) {
-				printf("oh ya, realloc...\n");
+				//printf("oh ya, realloc...\n");
 				line->text = (char *)realloc(line->text, (line->size + 1)*sizeof(char));
 				line->size += 1;
 			}
@@ -97,6 +97,37 @@ Line_InsertCh(Line * line, char * ch)
 		}
 		
 		line->num_chars += 1; //inserted one unicode character
+	}
+}
+
+static
+void
+Line_InsertStr(Line * line, char * str)
+{
+	int c;
+	size_t n;
+	char ch[7];
+	Rune rune;
+
+	n = 0;
+	for(;;) {
+		c = *(unsigned char*)str;
+		
+		if(c < Runeself) {
+			if(c == 0)
+				break;
+			n = 1;
+			ch[0] = (char)c;
+			ch[1] = '\0';
+		} else {
+			n = chartorune(&rune, str);
+			memcpy(ch, str, n);
+			ch[n] = '\0';
+		}
+		
+		Line_InsertCh(line, ch);
+		
+		str += n;
 	}
 }
 
@@ -219,23 +250,26 @@ Frame_SoftWrap(Frame * frm)
 	
 	//make sure it is worth wrapping (greater than zero)
 	if(i > 0) {
-		// i now points to the space character, so chop off there
-		full_line->text[i] = '\0';
-		full_line->len = i;
-		
+		// i now points to the space character, 
+		// so move up one to start of the word
 		++i;
 		
-		full_line->size = strlen(&full_line->text[i]);
-		full_line->num_chars = utflen(&full_line->text[i]);
+		//soft wrap to the next line
+		Line_InsertStr(new_line, &full_line->text[i]);
 		
-		Line_InsertCh(new_line, &full_line->text[i]);
+		//update the full line with the appropriate data (new length, etc)
+		full_line->size -= strlen(&full_line->text[i]);
+		full_line->num_chars -= utflen(&full_line->text[i]);
+		full_line->len = i;
+		full_line->text[i] = '\0';
+		//printf("full_line->size: %d, chars: %d, len: %d\n", full_line->size, full_line->num_chars, full_line->len);
 	}
 }
 
-//if there's room on the previous line, tries to do soft wrap
-//assumes that the current line has at least one character
-//Will call Frame_DeleteLine if undoes the soft wrap
-/*static
+// If there's room on the previous line, tries to put back the word.
+// Assumes that the current line has at least one character.
+// Will call Frame_DeleteLine if undoes the soft wrap.
+static
 void
 Frame_UndoSoftWrap(Frame * frm)
 {
@@ -248,26 +282,27 @@ Frame_UndoSoftWrap(Frame * frm)
 		if(prev_line->end == SOFT) {
 			int i = cur_line->len;
 			
-			while(cur_line->text[i] != ' ' && i > 0) {
+			// check if the current line only has one word
+			while(i > 0 && cur_line->text[i] != ' ') {
 				--i;
 			}
 			
-			//if i is not zero, then no need to soft wrap
+			// if i is *not* zero, then no need to soft wrap
 			// (i.e. not on the first word of the line)
+			// if i is zero, then current line has only one word (with no space) 
 			if(i == 0) {
-				//see if the previous line has room for the word
-				int prev_room = prev_line->size - prev_line->len;
-				int cur_room = cur_line->len;
+				//see if the previous line has room for the word (actual characters)
+				int prev_char_room = (CHARS_PER_LINE - prev_line->num_chars);
 				
-				if(prev_room > cur_room) {
-					memcpy(&prev_line->text[prev_line->len+1], cur_line->text, cur_room*sizeof(char));
-					Line_SetLength(prev_line, prev_line->len + cur_room + 1);
+				if(prev_char_room >= cur_line->num_chars) {
+					Line_InsertStr(prev_line, cur_line->text);
+					// no need for the current line now
 					Frame_DeleteLine(frm);
 				}
 			}
 		}
 	}
-}*/
+}
 
 void
 Frame_InsertCh(Frame * frm, char * ch)
@@ -280,6 +315,7 @@ Frame_InsertCh(Frame * frm, char * ch)
 		cur_line->end = SOFT;
 		
 		if(*ch == ' ') {
+			Line_InsertCh(cur_line, ch);
 			Frame_AddLine(frm);
 		} else {
 			Frame_SoftWrap(frm);
@@ -296,8 +332,16 @@ Frame_DeleteCh(Frame * frm)
 	
 	if(cur_line->len > 0) {
 		Line_DeleteCh(cur_line);
+		Frame_UndoSoftWrap(frm);
 	} else {
 		Frame_DeleteLine(frm);
+		
+		cur_line = (Line *)frm->cur_line->data;
+		if(cur_line->end == SOFT && 
+			cur_line->num_chars > CHARS_PER_LINE && 
+			cur_line->text[cur_line->len-1] == ' ') {
+			Line_DeleteCh(cur_line);
+		}
 	}
 }
 
@@ -313,8 +357,13 @@ Frame_InsertNewLine(Frame * frm)
 void
 Frame_InsertTab(Frame * frm)
 {
-	static char * tab = "\x20\x20\x20\x20"; //four spaces
-	Frame_InsertCh(frm, tab);
+	int i;
+	Line * cur_line = (Line *)frm->cur_line->data;
+	char * space = " ";
+	
+	for(i = 0; i < 4 && cur_line->num_chars < CHARS_PER_LINE; ++i) {
+		Frame_InsertCh(frm, space);
+	}
 }
 
 
@@ -336,12 +385,12 @@ Frame_IterNext(Frame * frm)
 	return next;
 }
 
-static
+/*static
 int
 Frame_IterHasNext(Frame * frm)
 {
 	return (iter != NULL);
-}
+}*/
 
 void
 Frame_IterBegin(Frame * frm)
@@ -392,7 +441,6 @@ Frame_IterPrev(Frame * frm)
 
 #define BUF_SIZE 4096
 #define EOL_SIZE 1
-#define SOFT_CHAR ' '
 #define HARD_CHAR '\n'
 
 void
@@ -408,7 +456,7 @@ Frame_Write(Frame * frm, FILE * file)
 	while((cur_line = Frame_IterNext(frm))) {
 		len = cur_line->len;
 		
-		//flush the buffer if it is full (+1 because of EOL character)
+		//flush the buffer if it is full
 		if(ptr + len + EOL_SIZE >= BUF_SIZE) {
 			fwrite(buf, sizeof(char), ptr, file);
 			ptr = 0;
@@ -419,10 +467,7 @@ Frame_Write(Frame * frm, FILE * file)
 		ptr += len;
 		
 		//put the right character for EOL
-		if(cur_line->end == SOFT && Frame_IterHasNext(frm)) {
-			buf[ptr] = SOFT_CHAR;
-			ptr += EOL_SIZE;
-		} else if(cur_line->end == HARD) {
+		if(cur_line->end == HARD) {
 			buf[ptr] = HARD_CHAR;
 			ptr += EOL_SIZE;
 		}

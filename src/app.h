@@ -30,8 +30,8 @@ typedef enum {
 } cs_key_t;
 
 //Golden Rectangle
-#define WIN_INIT_WIDTH  850 * 1.1
-#define WIN_INIT_HEIGHT 525 * 1.1
+#define WIN_INIT_WIDTH  850 * 1.2
+#define WIN_INIT_HEIGHT 525 * 1.2
 
 #define FONT_SIZE 24
 
