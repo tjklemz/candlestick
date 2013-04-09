@@ -497,6 +497,9 @@ int main(int argc, char **argv)
 	SetFrontProcess(&psn);
 
 	[app setDelegate:del];
+	
+	//[[NSApplication sharedApplication] setApplicationIconImage:[NSImage imageNamed:@"candlestick_logo.icns"]];
+	
 	[app run];
 	[app setDelegate:NULL];
 	[del release];

@@ -4,8 +4,6 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
-	<key>CFBundleDisplayName</key>
-	<string>candlestick</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -29,15 +27,19 @@
 	<key>CFBundleExecutable</key>
 	<string>candlestick.sh</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.koalasoft.candlestick</string>
+	<string>com.candlestickapp.candlestick</string>
 	<key>CFBundleName</key>
 	<string>candlestick</string>
+	<key>CFBundleIconFile</key>
+	<string>candlestick_logo.icns</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Candlestick—Just Write. Copyright 2013 Thomas Klemz.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2013 Thomas Klemz. All Rights Reserved.</string>
+	<string>Copyright © 2013 Thomas Klemz.</string>
 
 	<key>UTImportedTypeDeclarations</key>
 	<array>

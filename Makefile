@@ -40,7 +40,7 @@ SRCDIR = src
 LIBDIR = lib/$(PLAT)
 RESDIR = res
 OUTDIR = package
-APPDIR = $(OUTDIR)/$(APPNAME)app
+APPDIR = $(APPNAME)app
 MACAPP = $(BINARY).app
 FONTDIR = $(RESDIR)/common/font
 
@@ -104,23 +104,23 @@ $(BINARY): $(SOURCE)
 
 .PHONY: package-mac
 package-mac: package-common $(RESDIR)/mac/*
-	@cp -Ra $(RESDIR)/mac/$(MACAPP) $(APPDIR)
-	@cp -a $(BINARY) $(APPDIR)/$(MACAPP)/Contents/MacOS
-	@cp -Ra $(FONTDIR) $(APPDIR)/$(MACAPP)/Contents/MacOS
-	@tar -cjf $(OUTDIR)/$(ARCHIVE) $(APPDIR)/$(MACAPP)
+	@cp -Ra $(RESDIR)/mac/$(MACAPP) $(OUTDIR)/$(APPDIR)
+	@cp -a $(BINARY) $(OUTDIR)/$(APPDIR)/$(MACAPP)/Contents/MacOS
+	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)/$(MACAPP)/Contents/MacOS
+	@cd $(OUTDIR) && tar -cjf $(ARCHIVE) $(APPDIR)
 	@echo "Packaged $(APPNAME) into $(APPDIR)/$(MACAPP)\n"
 	@echo "Archived into $(OUTDIR)/$(ARCHIVE)"
 
 .PHONY: package-nix
 package-nix: package-common $(RESDIR)/nix/*
-	@cp -a $(BINARY) $(APPDIR)
-	@cp -Ra $(FONTDIR) $(APPDIR)
+	@cp -a $(BINARY) $(OUTDIR)/$(APPDIR)
+	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)
 	@echo "Packaged $(APPNAME) into $(APPDIR)."
 
 .PHONY: package-common
 package-common: $(BINARY) $(RESDIR)/common/*
 	@echo "\nPackaging $(APPNAME)..."
-	@mkdir -p $(APPDIR)
+	@mkdir -p $(OUTDIR)/$(APPDIR)
 
 .PHONY: package
 package: package-$(PLAT)
