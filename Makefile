@@ -133,11 +133,11 @@ package: package-$(PLAT)
 
 .PHONY: run-mac
 run-mac: package
-	@open $(APPDIR)/$(MACAPP)
+	@open $(OUTDIR)/$(APPDIR)/$(MACAPP)
 	
 .PHONY: run-nix
 run-nix: package
-	@cd $(APPDIR) && ./$(BINARY)
+	@cd $(OUTDIR)/$(APPDIR) && ./$(BINARY)
 
 .PHONY: run
 run: run-$(PLAT)

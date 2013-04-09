@@ -131,6 +131,13 @@ App_OnChar(char * ch)
 }
 
 void
+App_OnKeyUp(char * key)
+{
+	// do nothing right now
+	return;
+}
+
+void
 App_OnKeyDown(char * key)
 {
 	Disp_ScrollReset();

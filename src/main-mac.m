@@ -208,12 +208,10 @@ static void stopTimer()
 - (void)keyDown:(NSEvent *)anEvent
 {	
 	switch([anEvent keyCode]) {
-	case UP_ARROW:
-		App_OnSpecialKeyDown(CS_ARROW_UP);
-	    break;
-	case DOWN_ARROW:
-		App_OnSpecialKeyDown(CS_ARROW_DOWN);
-		break;
+	case LEFT_ARROW:     App_OnSpecialKeyDown(CS_ARROW_LEFT);     break;
+	case RIGHT_ARROW:    App_OnSpecialKeyDown(CS_ARROW_RIGHT);    break; 
+	case UP_ARROW:       App_OnSpecialKeyDown(CS_ARROW_UP);       break;
+	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN);     break;
 	default:
 		{
 			char character[255];
@@ -230,13 +228,17 @@ static void stopTimer()
 - (void)keyUp:(NSEvent *)anEvent
 {
 	switch([anEvent keyCode]) {
-	case UP_ARROW:
-		App_OnSpecialKeyUp(CS_ARROW_UP);
-	    break;
-	case DOWN_ARROW:
-		App_OnSpecialKeyUp(CS_ARROW_DOWN);
-		break;
+	case LEFT_ARROW:     App_OnSpecialKeyUp(CS_ARROW_LEFT);       break;
+	case RIGHT_ARROW:    App_OnSpecialKeyUp(CS_ARROW_RIGHT);      break;
+	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP);         break;
+	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN);       break;
 	default:
+		{
+			char character[255];
+			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
+			strcpy(character, key);
+			App_OnKeyUp(character);
+		}
 	    break;
 	}
 	

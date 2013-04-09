@@ -55,6 +55,9 @@ void
 App_OnSpecialKeyDown(cs_key_t key);
 
 void
+App_OnKeyUp(char * key);
+
+void
 App_OnKeyDown(char * key);
 
 void
