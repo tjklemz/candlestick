@@ -21,13 +21,7 @@
 #ifndef APP_H
 #define APP_H
 
-typedef enum {
-	CS_UNDEFINED   = -1,
-	CS_ARROW_LEFT  = 37,
-	CS_ARROW_UP    = 38,
-	CS_ARROW_RIGHT = 39,
-	CS_ARROW_DOWN  = 40
-} cs_key_t;
+#define APP_NAME "Candlestick"
 
 //Golden Rectangle
 #define WIN_INIT_WIDTH  850 * 1.2
@@ -35,6 +29,39 @@ typedef enum {
 
 #define FONT_SIZE 24
 
+/**************************************************************************
+ * Keys
+ **************************************************************************/
+
+#define MODS_SHIFTED(mods)  ((mods & CS_SHIFT_L) || (mods & CS_SHIFT_R))
+#define MODS_COMMAND(mods)  ((mods & CS_CONTROL_L) || (mods & CS_CONTROL_R) || \
+                             (mods & CS_SUPER_L) || (mods & CS_SUPER_R))
+
+typedef enum {
+	CS_UNDEFINED     = -1,
+	//mods
+	CS_NONE          = 0,
+	CS_SHIFT_L       = (1 << 0),
+	CS_SHIFT_R       = (1 << 1),
+	CS_CONTROL_L     = (1 << 2),
+	CS_CONTROL_R     = (1 << 3),
+	CS_ALT_L         = (1 << 4),
+	CS_ALT_R         = (1 << 5),
+	CS_SUPER_L       = (1 << 6),
+	CS_SUPER_R       = (1 << 7),
+	//other
+	CS_ESCAPE        = 27,
+	CS_ARROW_LEFT    = 37,
+	CS_ARROW_UP      = 38,
+	CS_ARROW_RIGHT   = 39,
+	CS_ARROW_DOWN    = 40
+} cs_key_t;
+
+typedef long cs_key_mod_t;
+
+/**************************************************************************
+ * Methods
+ **************************************************************************/
 
 void
 App_OnInit();
@@ -49,30 +76,21 @@ void
 App_OnRender();
 
 void
-App_OnSpecialKeyUp(cs_key_t key);
+App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods);
 
 void
-App_OnSpecialKeyDown(cs_key_t key);
+App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods);
 
 void
-App_OnKeyUp(char * key);
-
-void
-App_OnKeyDown(char * key);
+App_OnKeyDown(char * key, cs_key_mod_t mods);
 
 void
 App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void));
 
 void
-App_Open(const char * filename);
+App_FullscreenDel(void (*ToggleFullscreen)(void));
 
 void
-App_SaveAs(const char * filename);
-
-void
-App_Save();
-
-void
-App_Reload();
+App_QuitRequestDel(void (*OnQuitRequest)(void));
 
 #endif

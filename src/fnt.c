@@ -455,6 +455,7 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	
 	Line * cur_line;
 	int line = 0;
+	float cursor_x = 0;
 	float h = fnt->line_height * 1.5 * fnt->w;
 	FT_Face f = fnt->face;
 	float s = fnt->size;
@@ -478,6 +479,14 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	glPushMatrix();
 	
 	Frame_IterEnd(frm);
+	
+	//Unroll one loop iteration so we can get the cursor_x position.
+	//Don't draw it yet because of the current stack (attributes).
+	if(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
+		cursor_x = draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line));
+		++line;
+	}
+	
 	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
 		draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line));
 		++line;
@@ -486,6 +495,18 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	glPopMatrix();
 	
 	glPopAttrib();
+	
+	//Now draw the cursor (correct gl stack attributes)
+	if(show_cursor) {
+		glPushMatrix();
+		
+		glBegin(GL_LINES);
+			glVertex2f(cursor_x, (float)y);
+			glVertex2f(cursor_x + fnt->w, (float)y);
+		glEnd();
+		
+		glPopMatrix();
+	}
 	
 	//go back to world coords
 	PopScreenCoordMat();

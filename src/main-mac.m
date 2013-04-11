@@ -233,12 +233,6 @@ static void stopTimer()
 	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP);         break;
 	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN);       break;
 	default:
-		{
-			char character[255];
-			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
-			strcpy(character, key);
-			App_OnKeyUp(character);
-		}
 	    break;
 	}
 	
@@ -277,7 +271,7 @@ static void stopTimer()
 
 +(void)populateApplicationMenu:(NSMenu *)aMenu
 {
-	NSString *applicationName = [[NSProcessInfo processInfo] processName];
+	NSString *applicationName = [NSString stringWithUTF8String:APP_NAME]; //[[NSProcessInfo processInfo] processName];
 	NSMenuItem *menuItem;
 
 	menuItem = [aMenu addItemWithTitle:[NSString stringWithFormat:@"%@ %@", NSLocalizedString(@"About", nil), applicationName]
@@ -421,7 +415,7 @@ InitialWindowSize()
 		defer: YES
 		screen: [NSScreen mainScreen]];
 	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, 100)];
-	[window setTitle: [[NSProcessInfo processInfo] processName]];
+	[window setTitle: [NSString stringWithUTF8String:APP_NAME]]; //[[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];
 

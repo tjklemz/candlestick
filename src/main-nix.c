@@ -29,8 +29,6 @@
 
 #include <X11/Xatom.h>
 
-static const char * const APP_NAME = "Candlestick";
-
 static Display * dpy;
 static Window root;
 static GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
@@ -151,7 +149,6 @@ CreateWindow()
 	wmDeleteMessage = XInternAtom(dpy, "WM_DELETE_WINDOW", 0);
 	XSetWMProtocols(dpy, win, &wmDeleteMessage, 1);
 	
-	
 	// make sure to enable OpenGL before showing window,
 	// otherwise weird window flash/artifact for a second.
 	EnableOpenGL();
@@ -167,21 +164,31 @@ ToggleFullscreen()
 	App_OnInit();
 }
 
+void
+OnQuitRequest()
+{
+	printf("Quit requested...\n");
+	quit = 1;
+}
+
 int main(int argc, char *argv[])
 {
 	char text[255] = { '\0' };
 	KeySym sym;
 	int ucs;
-	int shifted = 0;
+	cs_key_mod_t mods = CS_NONE;
 	
 	CreateWindow();
 	
 	App_OnInit();
+	App_FullscreenDel(ToggleFullscreen);
+	App_QuitRequestDel(OnQuitRequest);
 
 	while(!quit) {
 		while(XPending(dpy)) {
 			XNextEvent(dpy, &xev);
 			
+			//have to manually handle the window close message
 			if (xev.type == ClientMessage &&
 				xev.xclient.data.l[0] == wmDeleteMessage) {
 				printf("Quitting...\n");
@@ -190,32 +197,28 @@ int main(int argc, char *argv[])
 				XGetWindowAttributes(dpy, win, &gwa);
 				App_OnResize(gwa.width, gwa.height);
 			} else if(xev.type == KeyPress) {
-				sym = XLookupKeysym(&xev.xkey, shifted);
+				//pass in shifted so that it returns uppercase/lowercase
+				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
 
 				switch(sym) {
-				case XK_Shift_L:
-				case XK_Shift_R:
-					shifted = 1;
-					break;
-				case XK_Escape:
-					quit = 1;
-					break;
-				case XK_F1:
-					ToggleFullscreen();
-					break;
-				case XK_Up:
-					App_OnSpecialKeyDown(CS_ARROW_UP);
-					break;
-				case XK_Down:
-					App_OnSpecialKeyDown(CS_ARROW_DOWN);
-					break;
+				case XK_Super_L:     mods |= CS_SUPER_L;                          break;
+				case XK_Super_R:     mods |= CS_SUPER_R;                          break;
+				case XK_Alt_L:       mods |= CS_ALT_L;                            break;
+				case XK_Alt_R:       mods |= CS_ALT_R;                            break;
+				case XK_Control_L:   mods |= CS_CONTROL_L;                        break;
+				case XK_Control_R:   mods |= CS_CONTROL_R;                        break;
+				case XK_Shift_L:     mods |= CS_SHIFT_L;                          break;
+				case XK_Shift_R:     mods |= CS_SHIFT_R;                          break;
+				case XK_Escape:      App_OnSpecialKeyDown(CS_ESCAPE,mods);        break;
+				case XK_Left:        App_OnSpecialKeyDown(CS_ARROW_LEFT,mods);    break;
+				case XK_Right:       App_OnSpecialKeyDown(CS_ARROW_RIGHT,mods);   break;
+				case XK_Up:          App_OnSpecialKeyDown(CS_ARROW_UP,mods);      break;
+				case XK_Down:        App_OnSpecialKeyDown(CS_ARROW_DOWN,mods);    break;
 				default:
 					ucs = keysym2ucs(sym);
-					//printf("ucs: %d sym: %d\n", ucs, (int)sym);
 					
 					if(ucs < 0) {
 						XLookupString(&xev.xkey, text, sizeof(text), &sym, NULL);
-						//printf("Code: %d\n", (int)text[0]);
 						text[1] = '\0';
 					} else {
 						int len = utf8proc_encode_char(ucs, text);
@@ -223,23 +226,28 @@ int main(int argc, char *argv[])
 					}
 					
 					if(*text) {
-						App_OnKeyDown(text);
+						App_OnKeyDown(text, mods);
 					}
 					break;
 				}
 			} else if(xev.type == KeyRelease) {
-				sym = XLookupKeysym(&xev.xkey, 0);
+				//pass in shifted so that it returns uppercase/lowercase
+				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
+				
 				switch(sym) {
-				case XK_Shift_L:
-				case XK_Shift_R:
-					shifted = 0;
-					break;
-				case XK_Up:
-					App_OnSpecialKeyUp(CS_ARROW_UP);
-					break;
-				case XK_Down:
-					App_OnSpecialKeyUp(CS_ARROW_DOWN);
-					break;
+				case XK_Super_L:     mods ^= CS_SUPER_L;                          break;
+				case XK_Super_R:     mods ^= CS_SUPER_R;                          break;
+				case XK_Alt_L:       mods ^= CS_ALT_L;                            break;
+				case XK_Alt_R:       mods ^= CS_ALT_R;                            break;
+				case XK_Control_L:   mods ^= CS_CONTROL_L;                        break;
+				case XK_Control_R:   mods ^= CS_CONTROL_R;                        break;
+				case XK_Shift_L:     mods ^= CS_SHIFT_L;                          break;
+				case XK_Shift_R:     mods ^= CS_SHIFT_R;                          break;
+				case XK_Escape:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
+				case XK_Left:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
+				case XK_Right:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
+				case XK_Up:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
+				case XK_Down:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
 				default:
 					break;
 				}

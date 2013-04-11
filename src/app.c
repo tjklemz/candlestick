@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  **************************************************************************/
+ 
+// This class is really an "App Delegate" that simply tells the other
+// classes what to do.
 
 #include "app.h"
 #include "disp.h"
@@ -29,12 +32,14 @@
 #include <ctype.h>
 #include <assert.h>
 
-//This class is really an "App Delegate" that simply tells the other
-// classes what to do.
+typedef void (*fullscreen_del_func_t)(void);
+typedef void (*quit_del_func_t)(void);
 
 static Frame * frm = 0;
 static char * _filename = 0;
 static anim_del_t * anim_del = 0;
+static fullscreen_del_func_t fullscreen_del = 0;
+static quit_del_func_t quit_del = 0;
 
 void
 App_OnInit()
@@ -60,9 +65,15 @@ void
 App_OnDestroy()
 {
 	free(anim_del);
+	anim_del = 0;
+	
 	free(_filename);
+	_filename = 0;
+	
 	Disp_Destroy();
+	
 	Frame_Destroy(frm);
+	frm = 0;
 }
 
 void
@@ -78,7 +89,7 @@ App_OnRender()
 }
 
 void
-App_OnSpecialKeyUp(cs_key_t key)
+App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods)
 {
 	switch(key) {
 	case CS_ARROW_UP:
@@ -91,7 +102,7 @@ App_OnSpecialKeyUp(cs_key_t key)
 }
 
 void
-App_OnSpecialKeyDown(cs_key_t key)
+App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 {
 	switch(key) {
 	case CS_ARROW_UP:
@@ -131,18 +142,39 @@ App_OnChar(char * ch)
 }
 
 void
-App_OnKeyUp(char * key)
-{
-	// do nothing right now
-	return;
-}
-
-void
-App_OnKeyDown(char * key)
+App_OnKeyDown(char * key, cs_key_mod_t mods)
 {
 	Disp_ScrollReset();
-	App_OnChar(key);
+	
+	if(MODS_COMMAND(mods)) {
+		switch(*key) {
+		case 'f':
+			if(fullscreen_del) {
+				fullscreen_del();
+			}
+			break;
+		case 'o':
+			printf("should open...\n");
+			break;
+		case 'q':
+			if(quit_del) {
+				quit_del();
+			}
+			break;
+		case 's':
+			printf("should save...\n");
+			break;
+		default:
+			break;
+		}
+	} else {
+		App_OnChar(key);
+	}
 }
+
+/**************************************************************************
+ * Delegates
+ **************************************************************************/
 
 void
 App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
@@ -158,8 +190,26 @@ App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
 	
 	Disp_AnimationDel(anim_del);
 	
-	printf("Delegates set.\n");
+	printf("Animation delegates set.\n");
 }
+
+void
+App_FullscreenDel(void (*ToggleFullscreen)(void))
+{
+	fullscreen_del = ToggleFullscreen;
+	printf("Fullscreen delegates set.\n");
+}
+
+void
+App_QuitRequestDel(void (*Quit)(void))
+{
+	quit_del = Quit;
+	printf("Quit delegates set.\n");
+}
+
+/**************************************************************************
+ * File management
+ **************************************************************************/
 
 //The App module should keep track of the File state
 // but delegate to other modules to handle the File?
@@ -275,12 +325,4 @@ App_Save()
 	assert(_filename != 0);
 	
 	App_SaveAs(_filename);
-}
-
-void
-App_Reload()
-{
-	assert(_filename != 0);
-	
-	App_Open(_filename);
 }
