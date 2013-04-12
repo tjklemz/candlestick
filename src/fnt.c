@@ -43,6 +43,7 @@
 #include <math.h>
 
 #include "fnt.h"
+#include "line.h"
 #include "opengl.h"
 #include "utf.h"
 #include "utils.h"
@@ -449,7 +450,34 @@ Fnt_Destroy(Fnt * fnt)
  **********************************************************************/
 
 void
-Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
+Fnt_Print(Fnt * fnt, char * str, int x, int y)
+{
+	float modelview_matrix[16];
+	PushScreenCoordMat();
+	
+	glPushAttrib(GL_LIST_BIT | GL_CURRENT_BIT  | GL_ENABLE_BIT | GL_TRANSFORM_BIT);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glDisable(GL_LIGHTING);
+	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
+	
+	glPushMatrix();
+	
+	draw_string(fnt->face, fnt->size, (float)x, (float)y, str);
+	
+	glPopMatrix();
+	glPopAttrib();
+	
+	PopScreenCoordMat();
+}
+
+void
+Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 {
 	float modelview_matrix[16];
 	
@@ -471,8 +499,6 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	
-
-	//glListBase(flist);
 
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
 	

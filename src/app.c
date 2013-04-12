@@ -23,6 +23,7 @@
 
 #include "app.h"
 #include "disp.h"
+#include "line.h"
 #include "frame.h"
 #include "utf.h"
 
@@ -35,11 +36,17 @@
 typedef void (*fullscreen_del_func_t)(void);
 typedef void (*quit_del_func_t)(void);
 
+typedef enum {
+	CS_TYPING,
+	CS_SAVING
+} cs_app_state_t;
+
 static Frame * frm = 0;
-static char * _filename = 0;
+static Line * filename = 0;
 static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
 static quit_del_func_t quit_del = 0;
+static cs_app_state_t app_state = CS_TYPING;
 
 void
 App_OnInit()
@@ -59,6 +66,8 @@ App_OnInit()
 	}
 	
 	Disp_Init(FONT_SIZE);
+	
+	app_state = CS_TYPING;
 }
 
 void
@@ -67,8 +76,7 @@ App_OnDestroy()
 	free(anim_del);
 	anim_del = 0;
 	
-	free(_filename);
-	_filename = 0;
+	Line_Destroy(filename);
 	
 	Disp_Destroy();
 	
@@ -85,7 +93,16 @@ App_OnResize(int w, int h)
 void
 App_OnRender()
 {
-	Disp_Render(frm);
+	Disp_BeginRender();
+	
+	switch(app_state) {
+	case CS_TYPING:
+		Disp_TypingScreen(frm);
+		break;
+	case CS_SAVING:
+		Disp_SaveScreen(Line_Text(filename));
+		break;
+	}
 }
 
 void
@@ -120,7 +137,7 @@ static
 void
 App_OnChar(char * ch)
 {
-	switch(ch[0]) {
+	switch(*ch) {
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
@@ -141,87 +158,9 @@ App_OnChar(char * ch)
 	}
 }
 
-void
-App_OnKeyDown(char * key, cs_key_mod_t mods)
-{
-	Disp_ScrollReset();
-	
-	if(MODS_COMMAND(mods)) {
-		switch(*key) {
-		case 'f':
-			if(fullscreen_del) {
-				fullscreen_del();
-			}
-			break;
-		case 'o':
-			printf("should open...\n");
-			break;
-		case 'q':
-			if(quit_del) {
-				quit_del();
-			}
-			break;
-		case 's':
-			printf("should save...\n");
-			break;
-		default:
-			break;
-		}
-	} else {
-		App_OnChar(key);
-	}
-}
-
-/**************************************************************************
- * Delegates
- **************************************************************************/
-
-void
-App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
-{
-	assert(anim_del == 0);
-	
-	anim_del = (anim_del_t *)malloc(sizeof(anim_del_t));
-	
-	anim_del->on_start = OnStart;
-	anim_del->called_start = 0;
-	anim_del->on_end = OnEnd;
-	anim_del->called_end = 0;
-	
-	Disp_AnimationDel(anim_del);
-	
-	printf("Animation delegates set.\n");
-}
-
-void
-App_FullscreenDel(void (*ToggleFullscreen)(void))
-{
-	fullscreen_del = ToggleFullscreen;
-	printf("Fullscreen delegates set.\n");
-}
-
-void
-App_QuitRequestDel(void (*Quit)(void))
-{
-	quit_del = Quit;
-	printf("Quit delegates set.\n");
-}
-
 /**************************************************************************
  * File management
  **************************************************************************/
-
-//The App module should keep track of the File state
-// but delegate to other modules to handle the File?
-
-static
-void
-App_SaveFilename(const char * filename)
-{
-	free(_filename);
-	_filename = (char *)malloc(strlen(filename) + 1);
-	strcpy(_filename, filename);
-}
 
 static
 void
@@ -239,6 +178,7 @@ App_Read(FILE * file)
 	Frame_Destroy(frm);
 	frm = Frame_Init(CHARS_PER_LINE);
 	
+	//get the file size
 	fseek(file, 0, SEEK_END);
 	len = ftell(file);
 	rewind(file);
@@ -279,50 +219,146 @@ App_Read(FILE * file)
 	}
 	
 	free(buffer);
-	
-	/*while((c = fgetc(file)) != EOF) {
-		App_OnChar(c);
-	}*/
 }
 
+/*static
 void
-App_Open(const char * filename)
+App_Open(const char * the_filename)
 {
 	FILE * file;
 	
-	printf("Opening file: %s\n", filename);
-	file = fopen(filename, "r");
+	printf("Opening file: %s\n", the_filename);
+	file = fopen(the_filename, "r");
 	
 	App_Read(file);
 	
 	fclose(file);
 	printf("...Done.\n");
 	
-	App_SaveFilename(filename);
+	App_SaveFilename(the_filename);
 	
 	Disp_ScrollReset();
-}
+}*/
 
+static
 void
-App_SaveAs(const char * filename)
+App_Save()
 {
 	FILE * file;
 	
-	printf("Saving to file: %s\n", filename);
-	file = fopen(filename, "w");
+	printf("Saving to file: %s\n", Line_Text(filename));
+	file = fopen(Line_Text(filename), "w");
 	
 	Frame_Write(frm, file);
 	
 	fclose(file);
 	printf("...Done.\n");
+}
+
+static
+int
+App_SaveAs()
+{
+	if(!Line_Text(filename)) {
+		fprintf(stderr, "Can't save an empty filename!\n");
+		return 0;
+	}
 	
-	App_SaveFilename(filename);
+	//tack on the .txt extension
+	Line_InsertStr(filename, ".txt");
+	
+	App_Save();
+	
+	return 1; //everything went ok
+}
+
+static
+void
+App_OnCharSave(char * ch)
+{
+	switch(*ch) {
+	case '\n':
+	case '\r':
+		if(App_SaveAs()) {
+			app_state = CS_TYPING;
+		}
+		break;
+	default:
+		Line_InsertCh(filename, ch);
+		break;
+	}
 }
 
 void
-App_Save()
+App_OnKeyDown(char * key, cs_key_mod_t mods)
 {
-	assert(_filename != 0);
+	Disp_ScrollReset();
 	
-	App_SaveAs(_filename);
+	if(MODS_COMMAND(mods)) {
+		switch(*key) {
+		case 'f':
+			if(fullscreen_del) {
+				fullscreen_del();
+			}
+			break;
+		case 'o':
+			printf("should open...\n");
+			break;
+		case 'q':
+			if(quit_del) {
+				quit_del();
+			}
+			break;
+		case 's':
+			printf("saving...\n");
+			if(!filename) {
+				filename = Line_Init(CHARS_PER_LINE);
+				app_state = CS_SAVING;
+			}
+			break;
+		default:
+			break;
+		}
+	} else {
+		if(app_state == CS_TYPING) {
+			App_OnChar(key);
+		} else if(app_state == CS_SAVING) {
+			App_OnCharSave(key);
+		}
+	}
+}
+
+/**************************************************************************
+ * Delegates
+ **************************************************************************/
+
+void
+App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
+{
+	assert(anim_del == 0);
+	
+	anim_del = (anim_del_t *)malloc(sizeof(anim_del_t));
+	
+	anim_del->on_start = OnStart;
+	anim_del->called_start = 0;
+	anim_del->on_end = OnEnd;
+	anim_del->called_end = 0;
+	
+	Disp_AnimationDel(anim_del);
+	
+	printf("Animation delegates set.\n");
+}
+
+void
+App_FullscreenDel(void (*ToggleFullscreen)(void))
+{
+	fullscreen_del = ToggleFullscreen;
+	printf("Fullscreen delegates set.\n");
+}
+
+void
+App_QuitRequestDel(void (*Quit)(void))
+{
+	quit_del = Quit;
+	printf("Quit delegates set.\n");
 }

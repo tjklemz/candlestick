@@ -39,7 +39,13 @@ void
 Disp_Destroy();
 
 void
-Disp_Render(Frame * frm);
+Disp_BeginRender();
+
+void
+Disp_TypingScreen(Frame * frm);
+
+void
+Disp_SaveScreen(char * filename);
 
 void
 Disp_Resize(int w, int h);

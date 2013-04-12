@@ -183,12 +183,21 @@ Disp_Destroy()
 	Fnt_Destroy(fnt_reg);
 }
 
+void
+Disp_BeginRender()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+	glTranslatef(0.0f, 0.0f, -1.0f);
+	glColor3ub(50, 31, 20);
+}
+
 #define DISP_LINE_PADDING 2
 
 //Frame is passed in, since input needs to deal with the Frame
 // and Display does not handle input, but only displaying
 void
-Disp_Render(Frame * frm)
+Disp_TypingScreen(Frame * frm)
 {	
 	//window coords for start of frame
 	float fnt_width = Fnt_Width(fnt_reg);
@@ -235,16 +244,21 @@ Disp_Render(Frame * frm)
 	disp_y = disp_y - line_height * (-scroll.amt + first_line - 1);
 	
 	//printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
-	
- 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glLoadIdentity();
-	glTranslatef(0.0f, 0.0f, -1.0f);
-
-	glColor3ub(50, 31, 20);
 
 	glPushMatrix();
+		glColor3ub(50, 31, 20);
 		glLoadIdentity();
-		Fnt_Print(fnt_reg, frm, disp_x, disp_y, num_lines + DISP_LINE_PADDING, show_cursor);
+		Fnt_PrintFrame(fnt_reg, frm, disp_x, disp_y, num_lines + DISP_LINE_PADDING, show_cursor);
+	glPopMatrix();
+}
+
+void
+Disp_SaveScreen(char * filename)
+{
+	glPushMatrix();
+		glColor3ub(50, 31, 20);
+		glLoadIdentity();
+		Fnt_Print(fnt_reg, filename, 50, 100);
 	glPopMatrix();
 }
 

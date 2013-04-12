@@ -22,6 +22,7 @@
 #define FRAME_H
 
 #include <stdio.h>
+#include "line.h"
 
 /* A study at Wichita State University found that CPL had only small effects 
  * on readability, including factors of speed and comprehension. When asked 
@@ -37,18 +38,7 @@
 
 #define CHARS_PER_LINE 64
 
-typedef struct frame Frame;
-typedef struct line_type Line;
-
-/************************************
- * Line (should be another file?)
- ************************************/
-
-int
-Line_Length(Line * line);
-
-char*
-Line_Text(Line * line);
+typedef struct frame_t Frame;
 
 /************************************
  * Frame Operations

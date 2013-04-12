@@ -61,7 +61,10 @@ Fnt_Destroy(Fnt * fnt);
  **********************************************************************/
 
 void
-Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor);
+Fnt_Print(Fnt * fnt, char * str, int x, int y);
+
+void
+Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor);
 
 
 #endif

@@ -51,6 +51,7 @@ COMMON_SRC = \
   app.c \
   disp.c \
   fnt.c \
+  line.c \
   frame.c \
   list.c \
   utils.c \
