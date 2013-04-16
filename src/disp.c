@@ -255,10 +255,29 @@ Disp_TypingScreen(Frame * frm)
 void
 Disp_SaveScreen(char * filename)
 {
+	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
+	float disp_y = disp_h / 2;
+	float x = disp_x;
+	//float line_height = Fnt_LineHeight(fnt_reg) * 1.25 * Fnt_Width(fnt_reg);
+	
+	float orig_size = Fnt_Size(fnt_reg);
+	
 	glPushMatrix();
-		glColor3ub(50, 31, 20);
 		glLoadIdentity();
-		Fnt_Print(fnt_reg, filename, 50, 100);
+		
+		glColor3ub(30, 30, 30);
+		
+		Fnt_SetSize(fnt_reg, orig_size * 1.6);
+		Fnt_Print(fnt_reg, "Save As...", disp_x, disp_y - 120, 0);
+		
+		Fnt_SetSize(fnt_reg, orig_size * 1.15);
+		Fnt_Print(fnt_reg, "Enter a filename:", disp_x, disp_y - 40, 0);
+		
+		glColor3ub(50, 31, 20);
+		
+		Fnt_SetSize(fnt_reg, orig_size);
+		x = Fnt_Print(fnt_reg, filename, disp_x, disp_y, 1);
+		Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
 	glPopMatrix();
 }
 

@@ -371,15 +371,6 @@ static float draw_string(FT_Face face, float fsize, float x, float y, char *str)
 }
 
 /**********************************************************************
- * return the font size in points
- **********************************************************************/
-float
-Fnt_Size(Fnt * fnt)
-{
-	return fnt->size;
-}
-
-/**********************************************************************
  * return the font character width
  **********************************************************************/
 static
@@ -409,6 +400,22 @@ Fnt_Width(Fnt * fnt)
 }
 
 /**********************************************************************
+ * return the font size in points
+ **********************************************************************/
+float
+Fnt_Size(Fnt * fnt)
+{
+	return fnt->size;
+}
+
+void
+Fnt_SetSize(Fnt * fnt, float size)
+{
+	fnt->size = size;
+	Fnt_CalcWidth(fnt);
+}
+
+/**********************************************************************
  * returns the line height
  **********************************************************************/
 float
@@ -421,7 +428,7 @@ Fnt_LineHeight(Fnt * fnt)
  * creates a fnt with a given name and height (in points)
  **********************************************************************/
 Fnt*
-Fnt_Init(const char * fname, unsigned int size, float line_height)
+Fnt_Init(const char * fname, float size, float line_height)
 {
 	Fnt * fnt = (Fnt *)malloc(sizeof(Fnt));
 	
@@ -449,10 +456,29 @@ Fnt_Destroy(Fnt * fnt)
  * prints text at window coords (x,y) using the fnt
  **********************************************************************/
 
-void
-Fnt_Print(Fnt * fnt, char * str, int x, int y)
+inline
+static
+int
+Fnt_PrintCursor(Fnt * fnt, int x, int y)
+{
+	glPushMatrix();
+		
+	glBegin(GL_LINES);
+		glVertex2f(x, (float)y);
+		glVertex2f(x + fnt->w, (float)y);
+	glEnd();
+	
+	glPopMatrix();
+	
+	return x + fnt->w;
+}
+
+float
+Fnt_Print(Fnt * fnt, char * str, int x, int y, int show_cursor)
 {
 	float modelview_matrix[16];
+	float amt;
+	
 	PushScreenCoordMat();
 	
 	glPushAttrib(GL_LIST_BIT | GL_CURRENT_BIT  | GL_ENABLE_BIT | GL_TRANSFORM_BIT);
@@ -468,15 +494,21 @@ Fnt_Print(Fnt * fnt, char * str, int x, int y)
 	
 	glPushMatrix();
 	
-	draw_string(fnt->face, fnt->size, (float)x, (float)y, str);
+	amt = draw_string(fnt->face, fnt->size, (float)x, (float)y, str);
 	
 	glPopMatrix();
 	glPopAttrib();
 	
+	if(show_cursor) {
+		amt = Fnt_PrintCursor(fnt, amt, y);
+	}
+	
 	PopScreenCoordMat();
+	
+	return amt;
 }
 
-void
+float
 Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 {
 	float modelview_matrix[16];
@@ -524,16 +556,11 @@ Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cur
 	
 	//Now draw the cursor (correct gl stack attributes)
 	if(show_cursor) {
-		glPushMatrix();
-		
-		glBegin(GL_LINES);
-			glVertex2f(cursor_x, (float)y);
-			glVertex2f(cursor_x + fnt->w, (float)y);
-		glEnd();
-		
-		glPopMatrix();
+		cursor_x = Fnt_PrintCursor(fnt, cursor_x, y);
 	}
 	
 	//go back to world coords
 	PopScreenCoordMat();
+	
+	return cursor_x;
 }

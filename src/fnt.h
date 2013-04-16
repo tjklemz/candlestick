@@ -32,6 +32,9 @@ typedef struct fnt_t Fnt;
 float
 Fnt_Size(Fnt * fnt);
 
+void
+Fnt_SetSize(Fnt * fnt, float size);
+
 /**********************************************************************
  * returns the width of the letter 'M'
  **********************************************************************/
@@ -48,7 +51,7 @@ Fnt_LineHeight(Fnt * fnt);
  * creates a fnt with a given name and size (in points)
  **********************************************************************/
 Fnt*
-Fnt_Init(const char * fname, unsigned int size, float line_height);
+Fnt_Init(const char * fname, float size, float line_height);
 
 /**********************************************************************
  * destroys the fnt (destructor)
@@ -60,10 +63,10 @@ Fnt_Destroy(Fnt * fnt);
  * prints text at window coords (x,y) using the fnt
  **********************************************************************/
 
-void
-Fnt_Print(Fnt * fnt, char * str, int x, int y);
+float
+Fnt_Print(Fnt * fnt, char * str, int x, int y, int show_cursor);
 
-void
+float
 Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor);
 
 

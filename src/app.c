@@ -33,6 +33,12 @@
 #include <ctype.h>
 #include <assert.h>
 
+#ifdef __unix__
+#  include <sys/types.h>
+#  include <sys/stat.h>
+#  include <unistd.h>
+#endif
+
 typedef void (*fullscreen_del_func_t)(void);
 typedef void (*quit_del_func_t)(void);
 
@@ -47,6 +53,9 @@ static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
 static quit_del_func_t quit_del = 0;
 static cs_app_state_t app_state = CS_TYPING;
+
+#define SAVE_FOLDER "./documents/"
+#define MAX_FILE_CHARS 60
 
 void
 App_OnInit()
@@ -150,7 +159,10 @@ App_OnChar(char * ch)
 		break;
 	//ignore the carriage return
 	case '\r':
-		break;
+		printf("whoa! carriage returns are old school. try the linefeed from now on. strlen: %d\n", (int)strlen(ch));
+		//Linux is currently sending '\r' and not sure why... Will have to do further testing...
+		//break;
+		
 	/* Handle just newlines.
 	 * This is the default behaviour of Mac/Unix (that is, '\n'),
 	 * but Windows still uses '\r\n'. So, just ignore the '\r'.
@@ -254,9 +266,27 @@ void
 App_Save()
 {
 	FILE * file;
+	char full_filename[MAX_FILE_CHARS*6+1]; //unicode can have up to 6 bytes per character
 	
-	printf("Saving to file: %s\n", Line_Text(filename));
-	file = fopen(Line_Text(filename), "w");
+	assert(filename != 0);
+	assert(strlen(Line_Text(filename)) != 0);
+	assert(utflen(Line_Text(filename)) <= MAX_FILE_CHARS);
+	
+#ifdef __unix__
+	{
+		struct stat st = {0};
+
+		if(stat(SAVE_FOLDER, &st) == -1) {
+			mkdir(SAVE_FOLDER, 0777);
+		}
+	}
+#endif
+	
+	strcpy(full_filename, SAVE_FOLDER);
+	strcat(full_filename, Line_Text(filename));
+	
+	printf("Saving to file: %s\n", full_filename);
+	file = fopen(full_filename, "w");
 	
 	Frame_Write(frm, file);
 	
@@ -268,9 +298,11 @@ static
 int
 App_SaveAs()
 {
-	if(!Line_Text(filename)) {
+	assert(filename != 0);
+	
+	if(strlen(Line_Text(filename)) == 0) {
 		fprintf(stderr, "Can't save an empty filename!\n");
-		return 0;
+		return 0; //bad juju
 	}
 	
 	//tack on the .txt extension
@@ -286,25 +318,32 @@ void
 App_OnCharSave(char * ch)
 {
 	switch(*ch) {
+	case '\t':
+		break;
 	case '\n':
 	case '\r':
 		if(App_SaveAs()) {
 			app_state = CS_TYPING;
 		}
 		break;
+	case '\b':
+		Line_DeleteCh(filename);
+		break;
 	default:
-		Line_InsertCh(filename, ch);
+		if(utflen(Line_Text(filename)) < MAX_FILE_CHARS) {
+			Line_InsertCh(filename, ch);
+		}
 		break;
 	}
 }
 
 void
-App_OnKeyDown(char * key, cs_key_mod_t mods)
+App_OnKeyDown(char * ch, cs_key_mod_t mods)
 {
 	Disp_ScrollReset();
 	
 	if(MODS_COMMAND(mods)) {
-		switch(*key) {
+		switch(*ch) {
 		case 'f':
 			printf("fullscreen command combo...\n");
 			if(fullscreen_del) {
@@ -322,9 +361,13 @@ App_OnKeyDown(char * key, cs_key_mod_t mods)
 			break;
 		case 's':
 			printf("save command combo...\n");
-			if(!filename) {
-				filename = Line_Init(CHARS_PER_LINE);
-				app_state = CS_SAVING;
+			if(app_state == CS_TYPING) {
+				if(!filename) {
+					filename = Line_Init(CHARS_PER_LINE);
+					app_state = CS_SAVING;
+				} else {
+					App_Save();
+				}
 			}
 			break;
 		default:
@@ -333,9 +376,9 @@ App_OnKeyDown(char * key, cs_key_mod_t mods)
 		}
 	} else {
 		if(app_state == CS_TYPING) {
-			App_OnChar(key);
+			App_OnChar(ch);
 		} else if(app_state == CS_SAVING) {
-			App_OnCharSave(key);
+			App_OnCharSave(ch);
 		}
 	}
 }
