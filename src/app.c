@@ -148,7 +148,16 @@ App_OnChar(char * ch)
 	case '\b':
 		Frame_DeleteCh(frm);
 		break;
+	//ignore the carriage return
 	case '\r':
+		break;
+	/* Handle just newlines.
+	 * This is the default behaviour of Mac/Unix (that is, '\n'),
+	 * but Windows still uses '\r\n'. So, just ignore the '\r'.
+	 * Let Frame handle any logic regarding newlines.
+	 * For instance, could possibly do Unicode line endings (LS and PS).
+	 * For now, though, just do Unix style line endings (line feeds, '\n').
+	 */
 	case '\n':
 		Frame_InsertNewLine(frm);
 		break;
@@ -297,26 +306,29 @@ App_OnKeyDown(char * key, cs_key_mod_t mods)
 	if(MODS_COMMAND(mods)) {
 		switch(*key) {
 		case 'f':
+			printf("fullscreen command combo...\n");
 			if(fullscreen_del) {
 				fullscreen_del();
 			}
 			break;
 		case 'o':
-			printf("should open...\n");
+			printf("open command combo...\n");
 			break;
 		case 'q':
+			printf("quit command combo...\n");
 			if(quit_del) {
 				quit_del();
 			}
 			break;
 		case 's':
-			printf("saving...\n");
+			printf("save command combo...\n");
 			if(!filename) {
 				filename = Line_Init(CHARS_PER_LINE);
 				app_state = CS_SAVING;
 			}
 			break;
 		default:
+			printf("invalid command combo...\n");
 			break;
 		}
 	} else {

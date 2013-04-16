@@ -41,7 +41,7 @@
 static int isfullscreen = 0;
 static NSWindow *window;
 static SysView *view;
-static BOOL hasBeenSaved = NO;
+//static BOOL hasBeenSaved = NO;
 static NSTimer * renderTimer;
 
 @implementation SysView
@@ -122,7 +122,7 @@ static void stopTimer()
 	return YES;
 }
 
--(void)saveAs:(NSNotification *)notification
+/*-(void)saveAs:(NSNotification *)notification
 {
 	NSSavePanel *panel = [[NSSavePanel savePanel] retain];
 	[panel setLevel:CGShieldingWindowLevel()];
@@ -198,7 +198,7 @@ static void stopTimer()
 	}
 	
 	[self setNeedsDisplay:YES];
-}
+}*/
 
 #define UP_ARROW    126
 #define DOWN_ARROW  125
@@ -207,17 +207,26 @@ static void stopTimer()
 
 - (void)keyDown:(NSEvent *)anEvent
 {	
+	cs_key_mod_t mods = CS_NONE;
+	
+	NSUInteger flags = [anEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+	
+	if(flags & NSCommandKeyMask)    mods |= CS_SUPER;
+	if(flags & NSControlKeyMask)    mods |= CS_CONTROL;
+	if(flags & NSAlternateKeyMask)  mods |= CS_ALT;
+	if(flags & NSShiftKeyMask)      mods |= CS_SHIFT;
+	
 	switch([anEvent keyCode]) {
-	case LEFT_ARROW:     App_OnSpecialKeyDown(CS_ARROW_LEFT);     break;
-	case RIGHT_ARROW:    App_OnSpecialKeyDown(CS_ARROW_RIGHT);    break; 
-	case UP_ARROW:       App_OnSpecialKeyDown(CS_ARROW_UP);       break;
-	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN);     break;
+	case LEFT_ARROW:     App_OnSpecialKeyDown(CS_ARROW_LEFT, mods);     break;
+	case RIGHT_ARROW:    App_OnSpecialKeyDown(CS_ARROW_RIGHT, mods);    break; 
+	case UP_ARROW:       App_OnSpecialKeyDown(CS_ARROW_UP, mods);       break;
+	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN, mods);     break;
 	default:
 		{
 			char character[255];
 			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
 			strcpy(character, key);
-			App_OnKeyDown(character);
+			App_OnKeyDown(character, mods);
 		}
 	    break;
 	}
@@ -227,11 +236,20 @@ static void stopTimer()
 
 - (void)keyUp:(NSEvent *)anEvent
 {
+	cs_key_mod_t mods = CS_NONE;
+	
+	NSUInteger flags = [anEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+	
+	if(flags & NSCommandKeyMask)    mods |= CS_SUPER;
+	if(flags & NSControlKeyMask)    mods |= CS_CONTROL;
+	if(flags & NSAlternateKeyMask)  mods |= CS_ALT;
+	if(flags & NSShiftKeyMask)      mods |= CS_SHIFT;
+	
 	switch([anEvent keyCode]) {
-	case LEFT_ARROW:     App_OnSpecialKeyUp(CS_ARROW_LEFT);       break;
-	case RIGHT_ARROW:    App_OnSpecialKeyUp(CS_ARROW_RIGHT);      break;
-	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP);         break;
-	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN);       break;
+	case LEFT_ARROW:     App_OnSpecialKeyUp(CS_ARROW_LEFT, mods);       break;
+	case RIGHT_ARROW:    App_OnSpecialKeyUp(CS_ARROW_RIGHT, mods);      break;
+	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP, mods);         break;
+	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN, mods);       break;
 	default:
 	    break;
 	}
