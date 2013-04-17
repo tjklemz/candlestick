@@ -226,6 +226,10 @@ int main(int argc, char *argv[])
 					}
 					
 					if(*text) {
+						if(*text == '\r') {
+							//puts("Converted CR to LF");
+							*text = '\n';
+						}
 						App_OnKeyDown(text, mods);
 					}
 					break;

@@ -26,6 +26,7 @@
 #include "line.h"
 #include "frame.h"
 #include "utf.h"
+#include "list.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +34,8 @@
 #include <ctype.h>
 #include <assert.h>
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
+#  include <dirent.h>
 #  include <sys/types.h>
 #  include <sys/stat.h>
 #  include <unistd.h>
@@ -44,7 +46,8 @@ typedef void (*quit_del_func_t)(void);
 
 typedef enum {
 	CS_TYPING,
-	CS_SAVING
+	CS_SAVING,
+	CS_OPENING
 } cs_app_state_t;
 
 static Frame * frm = 0;
@@ -53,8 +56,15 @@ static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
 static quit_del_func_t quit_del = 0;
 static cs_app_state_t app_state = CS_TYPING;
+static Node * files = 0;
 
-#define SAVE_FOLDER "./documents/"
+#if defined(__APPLE__)
+// assumes exe lives in Appname.app/Contents/MacOS
+#    define DOCS_FOLDER "../../../documents/"
+#else
+#    define DOCS_FOLDER "./documents/"
+#endif
+
 #define MAX_FILE_CHARS 60
 
 void
@@ -79,6 +89,24 @@ App_OnInit()
 	app_state = CS_TYPING;
 }
 
+static
+void
+App_DestroyFilesList()
+{
+	if(files) {
+		Node * travel = files;
+		
+		while(travel) {
+			free(travel->data);
+			travel->data = 0;
+			travel = travel->next;
+		}
+		
+		Node_Destroy(files);
+		files = 0;
+	}
+}
+
 void
 App_OnDestroy()
 {
@@ -86,6 +114,7 @@ App_OnDestroy()
 	anim_del = 0;
 	
 	Line_Destroy(filename);
+	App_DestroyFilesList();
 	
 	Disp_Destroy();
 	
@@ -110,6 +139,12 @@ App_OnRender()
 		break;
 	case CS_SAVING:
 		Disp_SaveScreen(Line_Text(filename));
+		break;
+	case CS_OPENING:
+		Disp_OpenScreen(files);
+		break;
+	default:
+		puts("Not ok! What is being rendered?");
 		break;
 	}
 }
@@ -160,9 +195,7 @@ App_OnChar(char * ch)
 	//ignore the carriage return
 	case '\r':
 		printf("whoa! carriage returns are old school. try the linefeed from now on. strlen: %d\n", (int)strlen(ch));
-		//Linux is currently sending '\r' and not sure why... Will have to do further testing...
-		//break;
-		
+		break;	
 	/* Handle just newlines.
 	 * This is the default behaviour of Mac/Unix (that is, '\n'),
 	 * but Windows still uses '\r\n'. So, just ignore the '\r'.
@@ -263,26 +296,30 @@ App_Open(const char * the_filename)
 
 static
 void
-App_Save()
+App_CheckDocsFolder()
 {
-	FILE * file;
-	char full_filename[MAX_FILE_CHARS*6+1]; //unicode can have up to 6 bytes per character
-	
-	assert(filename != 0);
-	assert(strlen(Line_Text(filename)) != 0);
-	assert(utflen(Line_Text(filename)) <= MAX_FILE_CHARS);
-	
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	{
 		struct stat st = {0};
 
-		if(stat(SAVE_FOLDER, &st) == -1) {
-			mkdir(SAVE_FOLDER, 0777);
+		if(stat(DOCS_FOLDER, &st) == -1) {
+			mkdir(DOCS_FOLDER, (S_IRWXU | S_IRWXG | S_IRWXO));
 		}
 	}
 #endif
+}
+
+static
+void
+App_Save()
+{
+	FILE * file;
+	int filename_size = strlen(DOCS_FOLDER) + strlen(Line_Text(filename)) + 1;
+	char * full_filename = (char*)malloc(filename_size * sizeof(char));
 	
-	strcpy(full_filename, SAVE_FOLDER);
+	App_CheckDocsFolder();
+	
+	strcpy(full_filename, DOCS_FOLDER);
 	strcat(full_filename, Line_Text(filename));
 	
 	printf("Saving to file: %s\n", full_filename);
@@ -291,7 +328,10 @@ App_Save()
 	Frame_Write(frm, file);
 	
 	fclose(file);
-	printf("...Done.\n");
+	
+	free(full_filename);
+	
+	puts("...Done.");
 }
 
 static
@@ -311,6 +351,65 @@ App_SaveAs()
 	App_Save();
 	
 	return 1; //everything went ok
+}
+
+//only allows ".txt" extensions at the moment
+static
+void
+App_PopulateFiles()
+{
+	Node * cur;
+	
+	App_DestroyFilesList();
+	
+	App_CheckDocsFolder();
+	
+#if defined(__unix__) || defined(__APPLE__)
+	{
+		struct dirent * dp;
+		DIR * dfd;
+		
+		dfd = opendir(DOCS_FOLDER);
+		
+		while((dp = readdir(dfd))) {
+			struct stat st = {0};
+			int file_len = strlen(dp->d_name);
+			char * filename_full = malloc(strlen(dp->d_name) + strlen(DOCS_FOLDER) + 1);
+			
+			sprintf(filename_full, "%s%s", DOCS_FOLDER, dp->d_name);
+			
+			//only do something if the thing is an actual file and is .txt
+			if(stat(filename_full, &st) != -1) {
+				if(S_ISREG(st.st_mode & S_IFMT)) {
+					if(strstr(dp->d_name, ".txt")) {
+						//alloc storage for the filename
+						Node * file = Node_Init();
+						char * filename = malloc(file_len + 1);
+						//copy the filename
+						strcpy(filename, dp->d_name);
+						//store it
+						file->data = (void*)filename;
+						//add the file to the list
+						if(!files) {
+							files = file;
+							cur = files;
+						} else {
+							Node_Append(cur, file);
+							//update the tail pointer
+							cur = cur->next;
+						}
+					}
+				}
+			}
+		}
+		
+		closedir(dfd);
+	}
+#elif defined(_WIN32)
+	{
+		
+	}
+#endif
 }
 
 static
@@ -345,22 +444,26 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 	if(MODS_COMMAND(mods)) {
 		switch(*ch) {
 		case 'f':
-			printf("fullscreen command combo...\n");
+			puts("fullscreen command combo...");
 			if(fullscreen_del) {
 				fullscreen_del();
 			}
 			break;
 		case 'o':
-			printf("open command combo...\n");
+			puts("open command combo...");
+			if(app_state == CS_TYPING) {
+				app_state = CS_OPENING;
+				App_PopulateFiles();
+			}
 			break;
 		case 'q':
-			printf("quit command combo...\n");
+			puts("quit command combo...");
 			if(quit_del) {
 				quit_del();
 			}
 			break;
 		case 's':
-			printf("save command combo...\n");
+			puts("save command combo...");
 			if(app_state == CS_TYPING) {
 				if(!filename) {
 					filename = Line_Init(CHARS_PER_LINE);
@@ -371,14 +474,21 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			}
 			break;
 		default:
-			printf("invalid command combo...\n");
+			puts("invalid command combo...");
 			break;
 		}
 	} else {
 		if(app_state == CS_TYPING) {
 			App_OnChar(ch);
-		} else if(app_state == CS_SAVING) {
+			return;
+		}
+		if(*ch == CS_ESCAPE) {
+			app_state = CS_TYPING;
+			return;
+		}
+		if(app_state == CS_SAVING) {
 			App_OnCharSave(ch);
+			return;
 		}
 	}
 }
@@ -401,19 +511,19 @@ App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
 	
 	Disp_AnimationDel(anim_del);
 	
-	printf("Animation delegates set.\n");
+	puts("Animation delegates set.");
 }
 
 void
 App_FullscreenDel(void (*ToggleFullscreen)(void))
 {
 	fullscreen_del = ToggleFullscreen;
-	printf("Fullscreen delegates set.\n");
+	puts("Fullscreen delegates set.");
 }
 
 void
 App_QuitRequestDel(void (*Quit)(void))
 {
 	quit_del = Quit;
-	printf("Quit delegates set.\n");
+	puts("Quit delegates set.");
 }

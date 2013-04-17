@@ -22,6 +22,7 @@
 #define DISPLAY_H
 
 #include "frame.h"
+#include "list.h"
 
 typedef void (*anim_del_func_t)(void);
 
@@ -46,6 +47,9 @@ Disp_TypingScreen(Frame * frm);
 
 void
 Disp_SaveScreen(char * filename);
+
+void
+Disp_OpenScreen(Node * files);
 
 void
 Disp_Resize(int w, int h);

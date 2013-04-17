@@ -22,6 +22,7 @@
 #include "opengl.h"
 #include "fnt.h"
 #include "utils.h"
+
 #include <math.h>
 
 #define LINE_HEIGHT 1.95f
@@ -159,6 +160,7 @@ Disp_ScrollReset()
 static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
+
 static const char * const fnt_reg_name = "./font/mplus-2m-regular.ttf";
 
 void
@@ -278,6 +280,39 @@ Disp_SaveScreen(char * filename)
 		Fnt_SetSize(fnt_reg, orig_size);
 		x = Fnt_Print(fnt_reg, filename, disp_x, disp_y, 1);
 		Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
+	glPopMatrix();
+}
+
+void
+Disp_OpenScreen(Node * files)
+{
+	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
+	//float disp_y = disp_h / 2;
+	float orig_size = Fnt_Size(fnt_reg);
+	Node * cur;
+	int line;
+	
+	glPushMatrix();
+		glLoadIdentity();
+		
+		glColor3ub(30, 30, 30);
+		
+		//print header
+		Fnt_SetSize(fnt_reg, orig_size * 1.6);
+		Fnt_Print(fnt_reg, "Open", disp_x, 60, 0);
+		
+		//print files
+		Fnt_SetSize(fnt_reg, orig_size * 1.15);
+		
+		if(!files) {
+			Fnt_Print(fnt_reg, "No files.", disp_x, 140, 0);
+		} else {
+			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
+				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 140 + 40*line, 0);
+			}
+		}
+		
+		Fnt_SetSize(fnt_reg, orig_size);
 	glPopMatrix();
 }
 

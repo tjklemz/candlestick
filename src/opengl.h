@@ -34,7 +34,7 @@
 #	include <GL/glu.h>
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__APPLE__)
 #	include <X11/Xlib.h>
 #	include <GL/glx.h>
 #endif

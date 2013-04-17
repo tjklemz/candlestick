@@ -223,10 +223,14 @@ static void stopTimer()
 	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN, mods);     break;
 	default:
 		{
-			char character[255];
+			char ch[255];
 			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
-			strcpy(character, key);
-			App_OnKeyDown(character, mods);
+			strcpy(ch, key);
+			if(ch[0] == '\r') {
+				//NSLog(@"Converted CR to LF\n");
+				ch[0] = '\n';
+			}
+			App_OnKeyDown(ch, mods);
 		}
 	    break;
 	}
