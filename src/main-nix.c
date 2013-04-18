@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		
+		App_OnUpdate();
 		App_OnRender();
 		glXSwapBuffers(dpy, win);
 	}

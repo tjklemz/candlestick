@@ -43,6 +43,9 @@ void
 Disp_BeginRender();
 
 void
+Disp_Update();
+
+void
 Disp_TypingScreen(Frame * frm);
 
 void

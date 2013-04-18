@@ -150,6 +150,12 @@ App_OnRender()
 }
 
 void
+App_OnUpdate()
+{
+	Disp_Update();
+}
+
+void
 App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods)
 {
 	switch(key) {
@@ -171,6 +177,9 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 		break;
 	case CS_ARROW_DOWN:
 		Disp_ScrollDownRequested();
+		break;
+	case CS_ESCAPE:
+		app_state = CS_TYPING;
 		break;
 	default:
 		break;
@@ -358,7 +367,7 @@ static
 void
 App_PopulateFiles()
 {
-	Node * cur;
+	Node * cur = 0;
 	
 	App_DestroyFilesList();
 	
@@ -480,15 +489,8 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 	} else {
 		if(app_state == CS_TYPING) {
 			App_OnChar(ch);
-			return;
-		}
-		if(*ch == CS_ESCAPE) {
-			app_state = CS_TYPING;
-			return;
-		}
-		if(app_state == CS_SAVING) {
+		} else if(app_state == CS_SAVING) {
 			App_OnCharSave(ch);
-			return;
 		}
 	}
 }

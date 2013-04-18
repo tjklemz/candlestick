@@ -204,6 +204,7 @@ static void stopTimer()
 #define DOWN_ARROW  125
 #define RIGHT_ARROW 124
 #define LEFT_ARROW  123
+#define ESCAPE      53
 
 - (void)keyDown:(NSEvent *)anEvent
 {	
@@ -221,6 +222,7 @@ static void stopTimer()
 	case RIGHT_ARROW:    App_OnSpecialKeyDown(CS_ARROW_RIGHT, mods);    break; 
 	case UP_ARROW:       App_OnSpecialKeyDown(CS_ARROW_UP, mods);       break;
 	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN, mods);     break;
+	case ESCAPE:         App_OnSpecialKeyDown(CS_ESCAPE, mods);         break;
 	default:
 		{
 			char ch[255];
@@ -254,6 +256,7 @@ static void stopTimer()
 	case RIGHT_ARROW:    App_OnSpecialKeyUp(CS_ARROW_RIGHT, mods);      break;
 	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP, mods);         break;
 	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN, mods);       break;
+	case CS_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE, mods);           break;
 	default:
 	    break;
 	}

@@ -79,27 +79,12 @@ Disp_AnimEnd()
 
 static
 void
-Disp_UpdateScroll(float amt, float limit)
-{
-	if(scroll.amt + amt < limit) {
-		scroll.amt += amt;
-	} else {
-		scroll.amt = limit;
-	}
-	
-	if(scroll.amt < 0) {
-		scroll.amt = 0;
-	}
-}
-
-static
-void
-Disp_Scroll(float amt, float limit)
+Disp_Scroll(float amt)
 {
 	static int step = 0;
 	
 	if(step < NUM_STEPS || scroll_requested) {
-		Disp_UpdateScroll(amt, limit);
+		scroll.amt += amt;
 		scroll.moving = 1;
 		++step;
 	} else {
@@ -194,6 +179,24 @@ Disp_BeginRender()
 	glColor3ub(50, 31, 20);
 }
 
+void
+Disp_Update()
+{
+	// if scrolling, update the animation
+	if(scroll.moving || scroll_requested) {
+		switch(scroll.dir) {
+		case SCROLL_UP:
+			Disp_Scroll(STEP_AMT);
+			break;
+		case SCROLL_DOWN:
+			Disp_Scroll(-STEP_AMT);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 #define DISP_LINE_PADDING 2
 
 //Frame is passed in, since input needs to deal with the Frame
@@ -210,26 +213,20 @@ Disp_TypingScreen(Frame * frm)
 	int num_lines;
 	int first_line;
 	int show_cursor;
-	
-	// if scrolling, update the animation
-	if(scroll.moving || scroll_requested) {
-		float limit = Frame_NumLines(frm) - 1; //(1 - STEP_AMT);
-		
-		switch(scroll.dir) {
-		case SCROLL_UP:
-			Disp_Scroll(STEP_AMT, limit);
-			break;
-		case SCROLL_DOWN:
-			Disp_Scroll(-STEP_AMT, limit);
-			break;
-		default:
-			break;
-		}
+	float scroll_amt;
+	float scroll_limit = Frame_NumLines(frm) - 1; //(1 - STEP_AMT);
+
+	if(scroll.amt > scroll_limit) {
+		scroll_amt = scroll_limit;
+	} else if(scroll.amt < 0) {
+		scroll_amt = 0;
+	} else {
+		scroll_amt = scroll.amt;
 	}
 	
 	// figure out num lines
 	num_lines = (int)ceil(disp_h / line_height);
-	first_line = (int)(scroll.amt - num_lines / 2);
+	first_line = (int)(scroll_amt - num_lines / 2);
 	
 	if(first_line <= 1) {
 		first_line = 1;
@@ -243,7 +240,7 @@ Disp_TypingScreen(Frame * frm)
 	
 	// scroll the display appropriately, minus the part that isn't viewable
 	// NOTE: (0, 0) in screen coords is now the top left of the window
-	disp_y = disp_y - line_height * (-scroll.amt + first_line - 1);
+	disp_y = disp_y - line_height * (-scroll_amt + first_line - 1);
 	
 	//printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
 
@@ -301,15 +298,40 @@ Disp_OpenScreen(Node * files)
 		Fnt_SetSize(fnt_reg, orig_size * 1.6);
 		Fnt_Print(fnt_reg, "Open", disp_x, 60, 0);
 		
-		//print files
 		Fnt_SetSize(fnt_reg, orig_size * 1.15);
 		
+		//print files
 		if(!files) {
 			Fnt_Print(fnt_reg, "No files.", disp_x, 140, 0);
 		} else {
+			int sel_box_x1 = disp_x;
+			int sel_box_x2 = sel_box_x1 + 200;
+			int sel_box_y1 = -scroll.amt*10;
+			int sel_box_y2 = sel_box_y1 + 100;
+
+			PushScreenCoordMat();
+
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
+				glColor3ub(30, 30, 30);
+
+				glBegin(GL_QUADS);
+					glVertex2f(sel_box_x1, sel_box_y1);
+					glVertex2f(sel_box_x1, sel_box_y2);
+					glVertex2f(sel_box_x2, sel_box_y2);
+					glVertex2f(sel_box_x2, sel_box_y1);
+					//glVertex2f(disp_x - 20, 140 - 40*line);
+					//glVertex2f(disp_x - 20, 140 + 40*line);
+					//glVertex2f(disp_w - disp_x + 20, 140 + 40*line);
+					//glVertex2f(disp_w - disp_x + 20, 140 - 40*line);
+				glEnd();
+
+				//if(sel_line)
+				glColor3ub(255, 255, 255);
+
 				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 140 + 40*line, 0);
 			}
+
+			PopScreenCoordMat();
 		}
 		
 		Fnt_SetSize(fnt_reg, orig_size);

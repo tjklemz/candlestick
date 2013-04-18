@@ -80,6 +80,9 @@ void
 App_OnRender();
 
 void
+App_OnUpdate();
+
+void
 App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods);
 
 void
