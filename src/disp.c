@@ -145,8 +145,10 @@ Disp_ScrollReset()
 static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
+static Fnt * fnt_heading = 0;
 
 static const char * const fnt_reg_name = "./font/mplus-2m-regular.ttf";
+static const char * const fnt_heading_name = "./font/LeagueGothic-Regular.otf";
 
 void
 Disp_Init(int fnt_size)
@@ -155,6 +157,7 @@ Disp_Init(int fnt_size)
 	scroll_requested = 0;
 	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
+	fnt_heading = Fnt_Init(fnt_heading_name, 100, 2);
 
 	glShadeModel(GL_SMOOTH);
     glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
@@ -168,6 +171,8 @@ void
 Disp_Destroy()
 {
 	Fnt_Destroy(fnt_reg);
+	//TODO: refactor the Fnt module so can use multiple fonts
+	//Fnt_Destroy(fnt_heading);
 }
 
 void
@@ -259,24 +264,64 @@ Disp_SaveScreen(char * filename)
 	float x = disp_x;
 	//float line_height = Fnt_LineHeight(fnt_reg) * 1.25 * Fnt_Width(fnt_reg);
 	
-	float orig_size = Fnt_Size(fnt_reg);
+	float orig_size = Fnt_Size(fnt_heading);
 	
 	glPushMatrix();
 		glLoadIdentity();
+
+		glColor3ub(45, 45, 45);
+
+		PushScreenCoordMat();
+		glBegin(GL_QUADS);
+			glVertex2f(0, disp_y - 124);
+			glVertex2f(0, disp_y - 135);
+			glVertex2f(disp_w - disp_x, disp_y - 135);
+			glVertex2f(disp_w - disp_x, disp_y - 124);
+		glEnd();
+
+#define BOX_TOP 32
+#define BOX_BOT 14
+
+		glBegin(GL_LINES);
+			//the box around the filename
+			glVertex2f(disp_x, disp_y - BOX_TOP);
+			glVertex2f(disp_x, disp_y + BOX_BOT);
+
+			glVertex2f(disp_x, disp_y + BOX_BOT);
+			glVertex2f(disp_w - disp_x, disp_y + BOX_BOT);
+
+			glVertex2f(disp_w - disp_x, disp_y + BOX_BOT);
+			glVertex2f(disp_w - disp_x, disp_y - BOX_TOP);
+
+			glVertex2f(disp_w - disp_x, disp_y - BOX_TOP);
+			glVertex2f(disp_x, disp_y - BOX_TOP);
+			//the frame line at the bottom
+			glVertex2f(disp_x, disp_y + 110);
+			glVertex2f(disp_w - disp_x, disp_y + 110);
+		glEnd();
+		PopScreenCoordMat();
+		
+		//glColor3ub(253, 253, 250);
+		
+		//glColor3ub(60, 60, 60);
+
+		//Fnt_SetSize(fnt_reg, orig_size * 1.6);
+		Fnt_Print(fnt_heading, "SAVE...", disp_x, disp_y - 140, 0);
 		
 		glColor3ub(30, 30, 30);
+
+		Fnt_SetSize(fnt_heading, orig_size * 0.3);
+		Fnt_Print(fnt_heading, "Enter a filename:", disp_x, disp_y - 45, 0);
+
+		glColor3ub(45, 45, 45);
+
+		Fnt_SetSize(fnt_heading, orig_size * 0.22);
+		Fnt_Print(fnt_heading, "Press enter when done. The .txt extension is added automatically.", disp_x, disp_y + 100, 0);
+		Fnt_SetSize(fnt_heading, orig_size);
+
+		x = Fnt_Print(fnt_reg, filename, disp_x + 10, disp_y, 1);
+		//Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
 		
-		Fnt_SetSize(fnt_reg, orig_size * 1.6);
-		Fnt_Print(fnt_reg, "Save As...", disp_x, disp_y - 120, 0);
-		
-		Fnt_SetSize(fnt_reg, orig_size * 1.15);
-		Fnt_Print(fnt_reg, "Enter a filename:", disp_x, disp_y - 40, 0);
-		
-		glColor3ub(50, 31, 20);
-		
-		Fnt_SetSize(fnt_reg, orig_size);
-		x = Fnt_Print(fnt_reg, filename, disp_x, disp_y, 1);
-		Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
 	glPopMatrix();
 }
 
