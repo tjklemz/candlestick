@@ -130,8 +130,8 @@ CreateWindow()
 	
 	XGrabKeyboard(dpy, win, True, GrabModeAsync,
             GrabModeAsync, CurrentTime);
-	XGrabPointer(dpy, win, True, ButtonPressMask,
-		GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
+	//XGrabPointer(dpy, win, True, ButtonPressMask,
+	//	GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 		
 	if(!fullscreen) {
 		int x;

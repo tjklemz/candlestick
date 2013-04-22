@@ -52,6 +52,7 @@ typedef enum {
 
 static Frame * frm = 0;
 static Line * filename = 0;
+static Line * filename_buf = 0;
 static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
 static quit_del_func_t quit_del = 0;
@@ -114,6 +115,7 @@ App_OnDestroy()
 	anim_del = 0;
 	
 	Line_Destroy(filename);
+	filename = 0;
 	App_DestroyFilesList();
 	
 	Disp_Destroy();
@@ -138,7 +140,7 @@ App_OnRender()
 		Disp_TypingScreen(frm);
 		break;
 	case CS_SAVING:
-		Disp_SaveScreen(Line_Text(filename));
+		Disp_SaveScreen(Line_Text(filename_buf));
 		break;
 	case CS_OPENING:
 		Disp_OpenScreen(files);
@@ -179,7 +181,11 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 		Disp_ScrollDownRequested();
 		break;
 	case CS_ESCAPE:
-		app_state = CS_TYPING;
+		if(app_state == CS_SAVING) {
+			app_state = CS_TYPING;
+			Line_Destroy(filename_buf);
+			filename_buf = 0;
+		}
 		break;
 	default:
 		break;
@@ -323,8 +329,11 @@ void
 App_Save()
 {
 	FILE * file;
-	int filename_size = strlen(DOCS_FOLDER) + strlen(Line_Text(filename)) + 1;
-	char * full_filename = (char*)malloc(filename_size * sizeof(char));
+	int filename_size;
+	char * full_filename;
+
+	filename_size = strlen(DOCS_FOLDER) + strlen(Line_Text(filename)) + 1;
+	full_filename = (char*)malloc(filename_size * sizeof(char));
 	
 	App_CheckDocsFolder();
 	
@@ -344,22 +353,13 @@ App_Save()
 }
 
 static
-int
+void
 App_SaveAs()
 {
-	assert(filename != 0);
-	
-	if(strlen(Line_Text(filename)) == 0) {
-		fprintf(stderr, "Can't save an empty filename!\n");
-		return 0; //bad juju
-	}
-	
 	//tack on the .txt extension
 	Line_InsertStr(filename, ".txt");
 	
 	App_Save();
-	
-	return 1; //everything went ok
 }
 
 //only allows ".txt" extensions at the moment
@@ -430,16 +430,22 @@ App_OnCharSave(char * ch)
 		break;
 	case '\n':
 	case '\r':
-		if(App_SaveAs()) {
+		if(strlen(Line_Text(filename_buf)) > 0) {
+			Line_Destroy(filename);
+			filename = filename_buf;
+			filename_buf = 0;
+
+			App_SaveAs();
+
 			app_state = CS_TYPING;
 		}
 		break;
 	case '\b':
-		Line_DeleteCh(filename);
+		Line_DeleteCh(filename_buf);
 		break;
 	default:
-		if(utflen(Line_Text(filename)) < MAX_FILE_CHARS) {
-			Line_InsertCh(filename, ch);
+		if(utflen(Line_Text(filename_buf)) < MAX_FILE_CHARS) {
+			Line_InsertCh(filename_buf, ch);
 		}
 		break;
 	}
@@ -475,8 +481,8 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			puts("save command combo...");
 			if(app_state == CS_TYPING) {
 				if(!filename) {
-					filename = Line_Init(CHARS_PER_LINE);
 					app_state = CS_SAVING;
+					filename_buf = Line_Init(CHARS_PER_LINE);
 				} else {
 					App_Save();
 				}
