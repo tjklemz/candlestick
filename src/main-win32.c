@@ -21,27 +21,24 @@
 #include "opengl.h"
 #include "app.h"
 
-static const char * const APP_NAME = "Candlestick";
+WNDCLASS wc;
+HWND hWnd;
+HDC hDC;
+HGLRC hRC;
+MSG msg;
+BOOL quit = FALSE;
 
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC);
 void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC);
+void toggleFullscreen();
+void onQuitRequest();
 
 // WinMain
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
 				   LPSTR lpCmdLine, int iCmdShow)
 {
-	HACCEL hAccel;
-	WNDCLASS wc;
-	HWND hWnd;
-	HDC hDC;
-	HGLRC hRC;
-	MSG msg;
-	BOOL quit = FALSE;
-	
-	hAccel = LoadAccelerators(hInstance,"ACCEL");
-	
 	// register window class
 	wc.style = CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
@@ -52,12 +49,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszMenuName = NULL;
-	wc.lpszClassName = (LPCSTR)APP_NAME;
+	wc.lpszClassName = NULL;
 	RegisterClass(&wc);
 	
 	// create main window
-	hWnd = CreateWindow( 
-		(LPCSTR)APP_NAME, (LPCSTR)APP_NAME, 
+	hWnd = CreateWindowW( 
+		(LPCWSTR)APP_NAME, (LPCWSTR)APP_NAME, 
 		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE,
 		0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
 		NULL, NULL, hInstance, NULL);
@@ -66,20 +63,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	EnableOpenGL(hWnd, &hDC, &hRC);
 
 	App_OnInit();
+	App_FullscreenDel(toggleFullscreen);
+	App_QuitRequestDel(onQuitRequest);
 	
 	while (!quit) {
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+		if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
 			// handle or dispatch messages
 			if (msg.message == WM_QUIT) {
 				quit = TRUE;
 			} else {
-				if(!TranslateAccelerator(hWnd, hAccel, &msg)) {
-					TranslateMessage(&msg);
-				}
-				DispatchMessage(&msg);
+				TranslateMessage(&msg);
+				DispatchMessageW(&msg);
 			}
 		} else {
 			//render
+			App_OnUpdate();
 			App_OnRender();
 
 			//swap buffers
@@ -140,11 +138,28 @@ BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int 
     return isChangeSuccessful;
 }
 
-// Window Procedure
+void toggleFullscreen()
+{
+	static BOOL fullscreen = FALSE;
 
+	if(!fullscreen) {
+		enterFullscreen(hWnd);
+	} else {
+		exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
+	}
+}
+
+void onQuitRequest()
+{
+	quit = 1;
+}
+
+// Window Procedure
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	
+	static cs_key_mod_t mods = CS_NONE;
+	static char ch[256];
+
 	switch (message)
 	{
 	case WM_CREATE:
@@ -165,42 +180,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 
 	case WM_CHAR:
-		App_OnKeyDown(wParam);
-		return 0;
-		
-	case WM_COMMAND:
-		if(LOWORD(wParam) == 501) {
-			MessageBox(hWnd, "yeah!", "control", MB_OK);
+		{
+			char wide[3] = {0};
+			wide[0] = (char)wParam;
+			App_OnKeyDown(wide, mods);
 		}
 		return 0;
 		
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		/*case 'S':
-			if(GetKeyState(VK_CONTROL) < 0) {
-				MessageBox(hWnd, "yeah!", "control-s", MB_OK);
-			}
-			break;*/
 		case VK_ESCAPE:
 			PostQuitMessage(0);
 			break;
-		case VK_F1:
-			{
-				static BOOL fullscreen = FALSE;
-
-				if(!fullscreen) {
-					fullscreen = enterFullscreen(hWnd);
-				} else {
-					fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
-				}
-			}
-			break;
+		case VK_LWIN:        mods |= CS_SUPER_L;                          break;
+		case VK_RWIN:        mods |= CS_SUPER_R;                          break;
+		case VK_LMENU:       mods |= CS_ALT_L;                            break;
+		case VK_RMENU:       mods |= CS_ALT_R;                            break;
+		case VK_LCONTROL:    mods |= CS_CONTROL_L;                        break;
+		case VK_RCONTROL:    mods |= CS_CONTROL_R;                        break;
+		case VK_LSHIFT:      mods |= CS_SHIFT_L;                          break;
+		case VK_RSHIFT:      mods |= CS_SHIFT_R;                          break;
+		//case VK_ESCAPE:      App_OnSpecialKeyDown(CS_ESCAPE,mods);        break;
+		case VK_LEFT:        App_OnSpecialKeyDown(CS_ARROW_LEFT,mods);    break;
+		case VK_RIGHT:       App_OnSpecialKeyDown(CS_ARROW_RIGHT,mods);   break;
+		case VK_UP:          App_OnSpecialKeyDown(CS_ARROW_UP,mods);      break;
+		case VK_DOWN:        App_OnSpecialKeyDown(CS_ARROW_DOWN,mods);    break;
 		default:
 			break;
 		}
 		return 0;
-	
+	case WM_KEYUP:
+		switch (wParam)
+		{
+		case VK_LWIN:        mods ^= CS_SUPER_L;                          break;
+		case VK_RWIN:        mods ^= CS_SUPER_R;                          break;
+		case VK_LMENU:       mods ^= CS_ALT_L;                            break;
+		case VK_RMENU:       mods ^= CS_ALT_R;                            break;
+		case VK_LCONTROL:    mods ^= CS_CONTROL_L;                        break;
+		case VK_RCONTROL:    mods ^= CS_CONTROL_R;                        break;
+		case VK_LSHIFT:      mods ^= CS_SHIFT_L;                          break;
+		case VK_RSHIFT:      mods ^= CS_SHIFT_R;                          break;
+		case VK_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
+		case VK_LEFT:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
+		case VK_RIGHT:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
+		case VK_UP:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
+		case VK_DOWN:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
+		default:
+			break;
+		}
+		return 0;
 	default:
 		break;
 	}

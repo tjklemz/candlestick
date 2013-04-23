@@ -231,7 +231,7 @@ App_OnChar(char * ch)
  * File management
  **************************************************************************/
 
-static
+/*static
 void
 App_Read(FILE * file)
 {
@@ -288,7 +288,7 @@ App_Read(FILE * file)
 	}
 	
 	free(buffer);
-}
+}*/
 
 /*static
 void

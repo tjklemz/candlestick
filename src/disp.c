@@ -261,7 +261,6 @@ Disp_SaveScreen(char * filename)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
 	float disp_y = disp_h / 2;
-	float x = disp_x;
 	//float line_height = Fnt_LineHeight(fnt_reg) * 1.25 * Fnt_Width(fnt_reg);
 	
 	float orig_size = Fnt_Size(fnt_heading);
@@ -319,7 +318,7 @@ Disp_SaveScreen(char * filename)
 		Fnt_Print(fnt_heading, "Press enter when done. The .txt extension is added automatically.", disp_x, disp_y + 100, 0);
 		Fnt_SetSize(fnt_heading, orig_size);
 
-		x = Fnt_Print(fnt_reg, filename, disp_x + 10, disp_y, 1);
+		Fnt_Print(fnt_reg, filename, disp_x + 10, disp_y, 1);
 		//Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
 		
 	glPopMatrix();

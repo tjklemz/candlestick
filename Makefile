@@ -47,7 +47,7 @@ FONTDIR = $(RESDIR)/common/font
 # It's better to list out the source files than glob them.
 # This way, there can be other WIP files in the directory w/o issue,
 # and there's no unnecessary compiling.
-COMMON_SRC = \
+SRC = \
   app.c \
   disp.c \
   fnt.c \
@@ -57,7 +57,6 @@ COMMON_SRC = \
   utils.c \
   utf8.c \
   rune.c \
-  keysym2ucs.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2
@@ -79,9 +78,10 @@ else ifeq ($(PLAT),nix)
 	GL_LIBS = -lGL -lGLU
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
 	MAIN_SRC = main-nix.c
+	SRC += keysym2ucs.c
 endif
 
-SOURCE = $(addprefix $(SRCDIR)/, $(COMMON_SRC) $(MAIN_SRC))
+SOURCE = $(addprefix $(SRCDIR)/, $(SRC) $(MAIN_SRC))
 LDFLAGS = $(COMMON_LIBS) $(OS_LIBS) $(GL_LIBS) $(FT_LIBS)
 CFLAGS = $(FREETYPE_INC)
 
@@ -118,6 +118,12 @@ package-nix: package-common $(RESDIR)/nix/*
 	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)
 	@echo "Packaged $(APPNAME) into $(APPDIR)."
 
+.PHONY: package-win32
+package-win32: package-common $(RESDIR)/win32/*
+	@cp -a $(BINARY) $(OUTDIR)/$(APPDIR)
+	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)
+	@echo "Packaged $(APPNAME) into $(APPDIR)."
+
 .PHONY: package-common
 package-common: $(BINARY) $(RESDIR)/common/*
 	@echo "\nPackaging $(APPNAME)..."
@@ -138,6 +144,10 @@ run-mac: package
 	
 .PHONY: run-nix
 run-nix: package
+	@cd $(OUTDIR)/$(APPDIR) && ./$(BINARY)
+
+.PHONY: run-win32
+run-win32: package
 	@cd $(OUTDIR)/$(APPDIR) && ./$(BINARY)
 
 .PHONY: run
