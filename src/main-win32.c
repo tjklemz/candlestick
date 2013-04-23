@@ -20,6 +20,7 @@
 
 #include "opengl.h"
 #include "app.h"
+#include <stdio.h>
 
 WNDCLASS wc;
 HWND hWnd;

@@ -39,6 +39,8 @@
 #  include <sys/types.h>
 #  include <sys/stat.h>
 #  include <unistd.h>
+#elif defined(_WIN32)
+#  include <io.h>
 #endif
 
 typedef void (*fullscreen_del_func_t)(void);
@@ -364,6 +366,7 @@ App_SaveAs()
 }
 
 //only allows ".txt" extensions at the moment
+
 static
 void
 App_PopulateFiles()
@@ -417,7 +420,34 @@ App_PopulateFiles()
 	}
 #elif defined(_WIN32)
 	{
-		
+		struct _finddata_t file_d;
+		long hFile;
+
+		char search[60];
+		sprintf(search, "%s*.txt", DOCS_FOLDER);
+
+		hFile = _findfirst(search, &file_d);
+
+		if(hFile != -1L) {
+			do {
+				Node * file = Node_Init();
+				char * filename = (char*)malloc(strlen(file_d.name)+1);
+				strcpy(filename, file_d.name);
+				file->data = (void*)filename;
+				// could possibly change list structure to contain a head and tail empty node
+				// then don't have to have this if statement
+				if(!files) {
+					files = file;
+					cur = files;
+				} else {
+					Node_Append(cur, file);
+					//update the tail pointer
+					cur = cur->next;
+				}
+			} while(_findnext(hFile, &file_d) == 0);
+		}
+
+		_findclose(hFile);
 	}
 #endif
 }
