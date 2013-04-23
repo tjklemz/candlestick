@@ -32,8 +32,8 @@
  * Scrolling and Animation
  **************************************************************************/
 
-#define NUM_STEPS 4
-#define STEP_AMT (1.0f / NUM_STEPS)
+#define NUM_STEPS 22
+#define STEP_AMT (0.0006f)
 
 typedef enum {
 	SCROLL_UP,
@@ -43,12 +43,13 @@ typedef enum {
 typedef struct {
 	int moving;
 	float amt;
+	float limit;
 	scrolling_dir_t dir;
 } scrolling_t;
 
 // Initialize the scroll amount values here, instead of in Init.
 // This way, the Disp can be recreated without reseting the scroll.
-static scrolling_t scroll = {0, 0.0f, SCROLL_UP};
+static scrolling_t scroll = {0, 0.0f, 0.0f, SCROLL_UP};
 
 static int scroll_requested = 0;
 static anim_del_t * anim_del = 0;
@@ -83,8 +84,14 @@ Disp_Scroll(float amt)
 {
 	static int step = 0;
 	
-	if(step < NUM_STEPS || scroll_requested) {
-		scroll.amt += amt;
+	if((step < NUM_STEPS || scroll_requested)) {
+		scroll.amt += amt*pow(step, 0.7f);
+		
+		if(scroll.amt < 0) {
+			scroll.amt = 0;
+		} else if(scroll.amt > scroll.limit) {
+			scroll.amt = scroll.limit;
+		}
 		scroll.moving = 1;
 		++step;
 	} else {
@@ -223,15 +230,10 @@ Disp_TypingScreen(Frame * frm)
 	int first_line;
 	int show_cursor;
 	float scroll_amt;
-	float scroll_limit = Frame_NumLines(frm) - 1; //(1 - STEP_AMT);
+	
+	scroll.limit = Frame_NumLines(frm) - 1;
 
-	if(scroll.amt > scroll_limit) {
-		scroll_amt = scroll_limit;
-	} else if(scroll.amt < 0) {
-		scroll_amt = 0;
-	} else {
-		scroll_amt = scroll.amt;
-	}
+	scroll_amt = scroll.amt;
 	
 	// figure out num lines
 	num_lines = (int)ceil(disp_h / line_height);

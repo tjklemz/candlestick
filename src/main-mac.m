@@ -49,11 +49,11 @@ static NSTimer * renderTimer;
 // Timer callback method
 - (void)timerFired:(id)sender
 {
+	App_OnUpdate();
     // It is good practice in a Cocoa application to allow the system to send the -drawRect:
     // message when it needs to draw, and not to invoke it directly from the timer.
     // All we do here is tell the display it needs a refresh
     [self setNeedsDisplay:YES];
-	App_OnUpdate();
 }
 
 static void startTimer()
