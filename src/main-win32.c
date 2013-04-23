@@ -49,12 +49,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszMenuName = NULL;
-	wc.lpszClassName = NULL;
+	wc.lpszClassName = (LPCSTR)APP_NAME;
 	RegisterClass(&wc);
 	
 	// create main window
-	hWnd = CreateWindowW( 
-		(LPCWSTR)APP_NAME, (LPCWSTR)APP_NAME, 
+	hWnd = CreateWindow( 
+		(LPCSTR)APP_NAME, (LPCSTR)APP_NAME, 
 		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE,
 		0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
 		NULL, NULL, hInstance, NULL);
@@ -67,13 +67,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	App_QuitRequestDel(onQuitRequest);
 	
 	while (!quit) {
-		if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			// handle or dispatch messages
 			if (msg.message == WM_QUIT) {
 				quit = TRUE;
 			} else {
 				TranslateMessage(&msg);
-				DispatchMessageW(&msg);
+				DispatchMessage(&msg);
 			}
 		} else {
 			//render
@@ -86,15 +86,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	}
 
 	App_OnDestroy();
-	
 	// shutdown OpenGL
 	DisableOpenGL(hWnd, hDC, hRC);
 	
 	// destroy the window explicitly
 	DestroyWindow(hWnd);
 	
-	return msg.wParam;
-	
+	//return (int)msg.wParam;
+	return 0;
 }
 
 BOOL enterFullscreen(HWND hWnd) {
@@ -143,9 +142,9 @@ void toggleFullscreen()
 	static BOOL fullscreen = FALSE;
 
 	if(!fullscreen) {
-		enterFullscreen(hWnd);
+		fullscreen = enterFullscreen(hWnd);
 	} else {
-		exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
+		fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
 	}
 }
 
@@ -153,6 +152,20 @@ void onQuitRequest()
 {
 	quit = 1;
 }
+
+/*inline cs_key_mod_t translateVK(int vk)
+{
+	switch(vk)
+	{
+	case VK_LCONTROL:    return CS_CONTROL_L;    break;
+	case VK_RCONTROL:    return CS_CONTROL_R;    break;
+	case VK_LSHIFT:      return CS_SHIFT_L;      break;
+	case VK_RSHIFT:      return CS_SHIFT_R;      break;
+	case VK_LMENU:       return CS_SUPER_L;      break;
+	case VK_RMENU:       return CS_SUPER_R;      break;
+	default:             return CS_NONE;         break;
+	}
+}*/
 
 // Window Procedure
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -175,7 +188,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 		PostQuitMessage(0);
 		return 0;
-		
+	
 	case WM_DESTROY:
 		return 0;
 
@@ -183,29 +196,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			char wide[3] = {0};
 			wide[0] = (char)wParam;
-			App_OnKeyDown(wide, mods);
+
+			printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
+			if((unsigned char)wide[0] > 31) {
+				App_OnKeyDown(wide, mods);
+			} else if(wide[0] > 0 && wide[0] <= 26) {
+				if(MODS_COMMAND(mods)) {
+					wide[0] += 'a'-1;
+					printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
+					App_OnKeyDown(wide, mods);
+				} else {
+					switch(wide[0]) {
+					case '\r':
+						wide[0] = '\n';
+						//fall through
+					case '\t':
+					case '\b':
+						App_OnKeyDown(wide, mods);
+						break;
+					default:
+						break;
+					}
+				}
+			}
 		}
 		return 0;
 		
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case VK_ESCAPE:
+		case VK_F1:
 			PostQuitMessage(0);
 			break;
-		case VK_LWIN:        mods |= CS_SUPER_L;                          break;
-		case VK_RWIN:        mods |= CS_SUPER_R;                          break;
-		case VK_LMENU:       mods |= CS_ALT_L;                            break;
-		case VK_RMENU:       mods |= CS_ALT_R;                            break;
-		case VK_LCONTROL:    mods |= CS_CONTROL_L;                        break;
-		case VK_RCONTROL:    mods |= CS_CONTROL_R;                        break;
-		case VK_LSHIFT:      mods |= CS_SHIFT_L;                          break;
-		case VK_RSHIFT:      mods |= CS_SHIFT_R;                          break;
-		//case VK_ESCAPE:      App_OnSpecialKeyDown(CS_ESCAPE,mods);        break;
+		case VK_ESCAPE:      App_OnSpecialKeyDown(CS_ESCAPE,mods);        break;
 		case VK_LEFT:        App_OnSpecialKeyDown(CS_ARROW_LEFT,mods);    break;
 		case VK_RIGHT:       App_OnSpecialKeyDown(CS_ARROW_RIGHT,mods);   break;
 		case VK_UP:          App_OnSpecialKeyDown(CS_ARROW_UP,mods);      break;
 		case VK_DOWN:        App_OnSpecialKeyDown(CS_ARROW_DOWN,mods);    break;
+		case VK_CONTROL:     mods |= CS_CONTROL;                          break;
+		case VK_SHIFT:       mods |= CS_SHIFT;                            break;
 		default:
 			break;
 		}
@@ -213,19 +242,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_KEYUP:
 		switch (wParam)
 		{
-		case VK_LWIN:        mods ^= CS_SUPER_L;                          break;
-		case VK_RWIN:        mods ^= CS_SUPER_R;                          break;
-		case VK_LMENU:       mods ^= CS_ALT_L;                            break;
-		case VK_RMENU:       mods ^= CS_ALT_R;                            break;
-		case VK_LCONTROL:    mods ^= CS_CONTROL_L;                        break;
-		case VK_RCONTROL:    mods ^= CS_CONTROL_R;                        break;
-		case VK_LSHIFT:      mods ^= CS_SHIFT_L;                          break;
-		case VK_RSHIFT:      mods ^= CS_SHIFT_R;                          break;
 		case VK_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
 		case VK_LEFT:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
 		case VK_RIGHT:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
 		case VK_UP:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
 		case VK_DOWN:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
+		case VK_CONTROL:     mods ^= CS_CONTROL;                          break;
+		case VK_SHIFT:       mods ^= CS_SHIFT;                            break;
 		default:
 			break;
 		}
