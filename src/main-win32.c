@@ -172,7 +172,8 @@ void onQuitRequest()
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static cs_key_mod_t mods = CS_NONE;
-	static char ch[256];
+	//TODO: Unicode and Unichar
+	//static char ch[256];
 
 	switch (message)
 	{

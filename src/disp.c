@@ -361,13 +361,13 @@ Disp_OpenScreen(Node * files)
 		if(!files) {
 			Fnt_Print(fnt_heading_italic, "No files.", disp_x, 175, 0);
 		} else {
-			int sel_box_x1 = disp_x;
-			int sel_box_x2 = sel_box_x1 + 200;
-			int sel_box_y1 = -scroll.amt*10;
-			int sel_box_y2 = sel_box_y1 + 100;
+			//int sel_box_x1 = disp_x;
+			//int sel_box_x2 = sel_box_x1 + 200;
+			//int sel_box_y1 = -scroll.amt*10;
+			//int sel_box_y2 = sel_box_y1 + 100;
 
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
-				glColor3ub(30, 30, 30);
+				/*glColor3ub(30, 30, 30);
 
 				glBegin(GL_QUADS);
 					glVertex2f(sel_box_x1, sel_box_y1);
@@ -378,7 +378,7 @@ Disp_OpenScreen(Node * files)
 					//glVertex2f(disp_x - 20, 140 + 40*line);
 					//glVertex2f(disp_w - disp_x + 20, 140 + 40*line);
 					//glVertex2f(disp_w - disp_x + 20, 140 - 40*line);
-				glEnd();
+				glEnd();*/
 
 				//if(sel_line == line)
 				//glColor3ub(253, 253, 250);

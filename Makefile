@@ -64,7 +64,7 @@ FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2
 COMMON_LIBS = -lm
 
 ifeq ($(PLAT),win32)
-	OS_LIBS = -luser32 -lgdi32
+	OS_LIBS = -luser32 -lgdi32 -lkernel32
 	GL_LIBS = -lopengl32 -lglu32
 	FT_LIBS = $(LIBDIR)/freetype.lib
 	MAIN_SRC = main-win32.c

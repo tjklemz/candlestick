@@ -40,6 +40,7 @@
 #  include <sys/stat.h>
 #  include <unistd.h>
 #elif defined(_WIN32)
+#  include <windows.h>
 #  include <io.h>
 #endif
 
@@ -323,6 +324,10 @@ App_CheckDocsFolder()
 		if(stat(DOCS_FOLDER, &st) == -1) {
 			mkdir(DOCS_FOLDER, (S_IRWXU | S_IRWXG | S_IRWXO));
 		}
+	}
+#elif defined(_WIN32)
+	{
+		CreateDirectory(DOCS_FOLDER, NULL);
 	}
 #endif
 }
