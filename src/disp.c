@@ -260,6 +260,11 @@ Disp_TypingScreen(Frame * frm)
 	glPopMatrix();
 }
 
+#define HEADING_SEP_COL glColor3ub(0, 161, 154);
+#define HEADING_COL     glColor3ub(0, 161, 154);
+#define LINES_COL       glColor3ub(0, 161, 154);
+#define TEXT_COL        glColor3ub(64, 64, 64);
+
 void
 Disp_SaveScreen(char * filename)
 {
@@ -272,8 +277,7 @@ Disp_SaveScreen(char * filename)
 	glPushMatrix();
 		glLoadIdentity();
 
-		glColor3ub(45, 45, 45);
-
+		HEADING_SEP_COL
 		PushScreenCoordMat();
 		glBegin(GL_QUADS);
 			glVertex2f(0, disp_y - 124);
@@ -285,6 +289,7 @@ Disp_SaveScreen(char * filename)
 #define BOX_TOP 32
 #define BOX_BOT 14
 
+		LINES_COL
 		glBegin(GL_LINES);
 			//the box around the filename
 			glVertex2f(disp_x, disp_y - BOX_TOP);
@@ -304,14 +309,13 @@ Disp_SaveScreen(char * filename)
 		glEnd();
 		PopScreenCoordMat();
 
+		HEADING_COL
 		Fnt_Print(fnt_heading, "SAVE...", disp_x, disp_y - 140, 0);
 		
-		glColor3ub(30, 30, 30);
+		TEXT_COL
 
 		Fnt_SetSize(fnt_heading, orig_size * 0.3);
 		Fnt_Print(fnt_heading, "Enter a filename:", disp_x, disp_y - 45, 0);
-
-		glColor3ub(45, 45, 45);
 
 		Fnt_SetSize(fnt_heading, orig_size * 0.22);
 		Fnt_Print(fnt_heading, "Press enter when done. The .txt extension is added automatically.", disp_x, disp_y + 100, 0);
@@ -334,32 +338,36 @@ Disp_OpenScreen(Node * files)
 	
 	glPushMatrix();
 		glLoadIdentity();
-	
-		glColor3ub(45, 45, 45);
 
 		PushScreenCoordMat();
 		
 		//draw a line for the heading
+		HEADING_SEP_COL
 		glBegin(GL_QUADS);
-			glVertex2f(0, 105);
 			glVertex2f(0, 115);
+			glVertex2f(0, 125);
+			glVertex2f(disp_w - disp_x, 125);
 			glVertex2f(disp_w - disp_x, 115);
-			glVertex2f(disp_w - disp_x, 105);
 		glEnd();
+
+		LINES_COL
 		glBegin(GL_LINES);
 			//the frame line at the bottom
 			glVertex2f(disp_x, disp_y + 110);
 			glVertex2f(disp_w - disp_x, disp_y + 110);
 		glEnd();
 		
+		HEADING_COL
 		//print header
-		Fnt_Print(fnt_heading, "OPEN...", disp_x, 100, 0);
+		Fnt_Print(fnt_heading, "OPEN...", disp_x, 110, 0);
 		
 		Fnt_SetSize(fnt_heading_italic, orig_size * 0.4);
 		
+		TEXT_COL
+
 		//print files
 		if(!files) {
-			Fnt_Print(fnt_heading_italic, "No files.", disp_x, 175, 0);
+			Fnt_Print(fnt_heading_italic, "No files.", disp_x, 185, 0);
 		} else {
 			//int sel_box_x1 = disp_x;
 			//int sel_box_x2 = sel_box_x1 + 200;
@@ -381,10 +389,9 @@ Disp_OpenScreen(Node * files)
 				glEnd();*/
 
 				//if(sel_line == line)
-				//glColor3ub(253, 253, 250);
-				glColor3ub(45, 45, 45);
+
 				Fnt_SetSize(fnt_heading, orig_size * 0.4);
-				Fnt_Print(fnt_heading, (char*)cur->data, disp_x, 175 + 40*line, 0);
+				Fnt_Print(fnt_heading, (char*)cur->data, disp_x, 185 + 60*line, 0);
 			}
 		}
 		
