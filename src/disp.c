@@ -146,9 +146,11 @@ static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
 static Fnt * fnt_heading = 0;
+static Fnt * fnt_heading_italic = 0;
 
 static const char * const fnt_reg_name = "./font/mplus-2m-regular.ttf";
 static const char * const fnt_heading_name = "./font/LeagueGothic-Regular.otf";
+static const char * const fnt_heading_italic_name = "./font/LeagueGothic-Italic.otf";
 
 void
 Disp_Init(int fnt_size)
@@ -158,6 +160,7 @@ Disp_Init(int fnt_size)
 	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
 	fnt_heading = Fnt_Init(fnt_heading_name, 100, 2);
+	fnt_heading_italic = Fnt_Init(fnt_heading_italic_name, 100, 2);
 
 	glShadeModel(GL_SMOOTH);
     glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
@@ -173,6 +176,7 @@ Disp_Destroy()
 	Fnt_Destroy(fnt_reg);
 	//TODO: refactor the Fnt module so can use multiple fonts
 	//Fnt_Destroy(fnt_heading);
+	//Fnt_Destroy(fnt_heading_italic);
 }
 
 void
@@ -299,12 +303,7 @@ Disp_SaveScreen(char * filename)
 			glVertex2f(disp_w - disp_x, disp_y + 110);
 		glEnd();
 		PopScreenCoordMat();
-		
-		//glColor3ub(253, 253, 250);
-		
-		//glColor3ub(60, 60, 60);
 
-		//Fnt_SetSize(fnt_reg, orig_size * 1.6);
 		Fnt_Print(fnt_heading, "SAVE...", disp_x, disp_y - 140, 0);
 		
 		glColor3ub(30, 30, 30);
@@ -328,32 +327,44 @@ void
 Disp_OpenScreen(Node * files)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
-	//float disp_y = disp_h / 2;
-	float orig_size = Fnt_Size(fnt_reg);
+	float disp_y = disp_h / 2;
+	float orig_size = Fnt_Size(fnt_heading);
 	Node * cur;
 	int line;
 	
 	glPushMatrix();
 		glLoadIdentity();
+	
+		glColor3ub(45, 45, 45);
+
+		PushScreenCoordMat();
 		
-		glColor3ub(30, 30, 30);
+		//draw a line for the heading
+		glBegin(GL_QUADS);
+			glVertex2f(0, 105);
+			glVertex2f(0, 115);
+			glVertex2f(disp_w - disp_x, 115);
+			glVertex2f(disp_w - disp_x, 105);
+		glEnd();
+		glBegin(GL_LINES);
+			//the frame line at the bottom
+			glVertex2f(disp_x, disp_y + 110);
+			glVertex2f(disp_w - disp_x, disp_y + 110);
+		glEnd();
 		
 		//print header
-		Fnt_SetSize(fnt_reg, orig_size * 1.6);
-		Fnt_Print(fnt_reg, "Open", disp_x, 60, 0);
+		Fnt_Print(fnt_heading, "OPEN...", disp_x, 100, 0);
 		
-		Fnt_SetSize(fnt_reg, orig_size * 1.15);
+		Fnt_SetSize(fnt_heading_italic, orig_size * 0.4);
 		
 		//print files
 		if(!files) {
-			Fnt_Print(fnt_reg, "No files.", disp_x, 140, 0);
+			Fnt_Print(fnt_heading_italic, "No files.", disp_x, 175, 0);
 		} else {
 			int sel_box_x1 = disp_x;
 			int sel_box_x2 = sel_box_x1 + 200;
 			int sel_box_y1 = -scroll.amt*10;
 			int sel_box_y2 = sel_box_y1 + 100;
-
-			PushScreenCoordMat();
 
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
 				glColor3ub(30, 30, 30);
@@ -369,16 +380,17 @@ Disp_OpenScreen(Node * files)
 					//glVertex2f(disp_w - disp_x + 20, 140 - 40*line);
 				glEnd();
 
-				//if(sel_line)
-				glColor3ub(255, 255, 255);
-
-				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 140 + 40*line, 0);
+				//if(sel_line == line)
+				//glColor3ub(253, 253, 250);
+				glColor3ub(45, 45, 45);
+				Fnt_SetSize(fnt_heading, orig_size * 0.4);
+				Fnt_Print(fnt_heading, (char*)cur->data, disp_x, 175 + 40*line, 0);
 			}
-
-			PopScreenCoordMat();
 		}
 		
-		Fnt_SetSize(fnt_reg, orig_size);
+		Fnt_SetSize(fnt_heading, orig_size);
+		
+		PopScreenCoordMat();
 	glPopMatrix();
 }
 

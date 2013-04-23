@@ -185,6 +185,8 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 			app_state = CS_TYPING;
 			Line_Destroy(filename_buf);
 			filename_buf = 0;
+		} else if(app_state == CS_OPENING) {
+			app_state = CS_TYPING;
 		}
 		break;
 	default:
