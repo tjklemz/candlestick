@@ -200,10 +200,9 @@ App_OnChar(char * ch)
 	case '\t':
 		Frame_InsertTab(frm);
 		break;
-	//actual delete
-	//case 239:
-	//backspace
+	//delete
 	case 127:
+	//backspace
 	case '\b':
 		Frame_DeleteCh(frm);
 		break;
@@ -440,6 +439,7 @@ App_OnCharSave(char * ch)
 			app_state = CS_TYPING;
 		}
 		break;
+	case 127:
 	case '\b':
 		Line_DeleteCh(filename_buf);
 		break;

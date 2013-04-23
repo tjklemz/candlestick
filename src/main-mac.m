@@ -122,84 +122,6 @@ static void stopTimer()
 	return YES;
 }
 
-/*-(void)saveAs:(NSNotification *)notification
-{
-	NSSavePanel *panel = [[NSSavePanel savePanel] retain];
-	[panel setLevel:CGShieldingWindowLevel()];
-	
-	[panel setAllowedFileTypes:[NSArray arrayWithObjects:@"txt", nil]];
-	[panel setCanSelectHiddenExtension:YES];
-	[panel setAllowsOtherFileTypes:YES];
-	[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
-	
-	[panel beginWithCompletionHandler:^(NSInteger returnCode) {
-		if(returnCode == NSFileHandlingPanelOKButton) {
-			const char * filename;
-			[panel orderOut:self];
-			filename = [[[panel URL] path] UTF8String];
-			NSLog(@"Got URL: %s", filename);
-			App_SaveAs(filename);
-			hasBeenSaved = YES;
-		}
-		
-		[panel release];
-	}];
-	
-	[self setNeedsDisplay:YES];
-}
-
--(void)save:(NSNotification *)notification
-{
-	if(!hasBeenSaved) {
-		[self saveAs:notification];
-	} else {
-		App_Save();
-	}
-	
-	[self setNeedsDisplay:YES];
-}
-
--(void)open:(NSNotification *)notification
-{
-	NSOpenPanel *panel = [[NSOpenPanel openPanel] retain];
-	[panel setLevel:CGShieldingWindowLevel()];
-
-	// Configure your panel the way you want it
-	[panel setCanChooseFiles:YES];
-	[panel setCanChooseDirectories:NO];
-	[panel setAllowsMultipleSelection:NO];
-	[panel setAllowedFileTypes:[NSArray arrayWithObject:@"txt"]];
-	[panel setAllowsOtherFileTypes:YES];
-	[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
-
-	[panel beginWithCompletionHandler:^(NSInteger result){
-	    if (result == NSFileHandlingPanelOKButton) {
-			const char * filename;
-			[panel orderOut:self];
-			filename = [[[panel URL] path] UTF8String];
-			NSLog(@"Got URL: %s", filename);
-			App_Open(filename);
-			[self setNeedsDisplay:YES];
-			hasBeenSaved = YES;
-	    }
-		
-		[[NSApp delegate] bringTextToFocus];
-
-	    [panel release];
-	}];
-}
-
--(void)reload:(NSNotification *)notification
-{
-	if(!hasBeenSaved) {
-		[self open:notification];
-	} else {
-		App_Reload();
-	}
-	
-	[self setNeedsDisplay:YES];
-}*/
-
 #define UP_ARROW    126
 #define DOWN_ARROW  125
 #define RIGHT_ARROW 124
@@ -231,6 +153,9 @@ static void stopTimer()
 			if(ch[0] == '\r') {
 				//NSLog(@"Converted CR to LF\n");
 				ch[0] = '\n';
+			} else if((int)ch[0] == -17) {
+				//NSLog(@"Converted Mac delete to actual delete\n");
+				ch[0] = 127;
 			}
 			App_OnKeyDown(ch, mods);
 		}
