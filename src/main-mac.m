@@ -23,6 +23,8 @@
 #include "opengl.h"
 #include "app.h"
 
+#include <sys/time.h>
+
 @interface SysView : NSOpenGLView
 {
 }
@@ -42,37 +44,75 @@ static int isfullscreen = 0;
 static NSWindow *window;
 static SysView *view;
 //static BOOL hasBeenSaved = NO;
-static NSTimer * renderTimer;
+static BOOL runLoop = FALSE;
 
 @implementation SysView
- 
-// Timer callback method
-- (void)timerFired:(id)sender
+
+static const int FPS = 25;
+static const int SKIP_TICKS = (10000 / FPS);
+
+int
+timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
 {
-	App_OnUpdate();
-    // It is good practice in a Cocoa application to allow the system to send the -drawRect:
-    // message when it needs to draw, and not to invoke it directly from the timer.
-    // All we do here is tell the display it needs a refresh
-    [self setNeedsDisplay:YES];
+	/* Perform the carry for the later subtraction by updating y. */
+       if (x->tv_usec < y->tv_usec) {
+         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+         y->tv_usec -= 1000000 * nsec;
+         y->tv_sec += nsec;
+       }
+       if (x->tv_usec - y->tv_usec > 1000000) {
+         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+         y->tv_usec += 1000000 * nsec;
+         y->tv_sec -= nsec;
+       }
+     
+       /* Compute the time remaining to wait.
+          tv_usec is certainly positive. */
+       result->tv_sec = x->tv_sec - y->tv_sec;
+       result->tv_usec = x->tv_usec - y->tv_usec;
+     
+       /* Return 1 if result is negative. */
+       return x->tv_sec < y->tv_sec;
 }
 
-static void startTimer()
+- (void)loop
 {
-	if(renderTimer == nil) {
-		renderTimer = [[NSTimer scheduledTimerWithTimeInterval:0.001   //in seconds
-	                                                    target:view
-	                                                  selector:@selector(timerFired:)
-	                                                  userInfo:nil
-	                                                   repeats:YES] retain];
+	struct timeval then;
+	struct timeval now;
+	struct timeval diff;
+	double sleep_time = 0.0;
+	
+	gettimeofday(&then, NULL);
+	
+	while(runLoop)
+	{
+		NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+		
+        App_OnUpdate();
+		
+		[view setNeedsDisplay:YES];
+		
+		then.tv_usec += SKIP_TICKS;
+		gettimeofday(&now, NULL);
+		
+		if(!timeval_subtract(&diff, &then, &now)) {
+			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
+			usleep(sleep_time);
+		}
+		
+		[pool release];
 	}
 }
 
-static void stopTimer()
+static void startLoop()
 {
-	if(renderTimer != nil) {
-		[renderTimer invalidate];
-		renderTimer = nil;
-	}
+	runLoop = TRUE;
+	[NSThread detachNewThreadSelector:@selector(loop) toTarget:view withObject:nil];
+}
+
+static void stopLoop()
+{
+	runLoop = FALSE;
 }
 
 - (id)initWithFrame:(NSRect)frameRect
@@ -99,7 +139,7 @@ static void stopTimer()
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 	
 	App_OnInit();
-	App_AnimationDel(&startTimer, &stopTimer);
+	App_AnimationDel(startLoop, stopLoop);
 }
 
 - (void)reshape
@@ -390,7 +430,7 @@ InitialWindowSize()
 {
 	App_OnDestroy();
 	[window release];
-	stopTimer();
+	stopLoop();
 	
 	NSLog(@"Terminating...");
 }
