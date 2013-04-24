@@ -27,7 +27,7 @@ HWND hWnd;
 HDC hDC;
 HGLRC hRC;
 MSG msg;
-BOOL quit = FALSE;
+BOOL runLoop = FALSE;
 
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -35,6 +35,41 @@ void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC);
 void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC);
 void toggleFullscreen();
 void onQuitRequest();
+
+#define FPS 25
+const int SKIP_TICKS = 1000 / FPS;
+
+DWORD WINAPI loop(LPVOID param)
+{
+	DWORD next_game_tick = GetTickCount();
+	int sleep_time = 0;
+
+	while(runLoop) {
+		InvalidateRect(hWnd, NULL, TRUE);
+
+		next_game_tick += SKIP_TICKS;
+		sleep_time = next_game_tick - GetTickCount();
+
+		if(sleep_time >= 0) {
+			Sleep(sleep_time);
+		}
+	}
+
+	return 0;
+}
+
+void startLoop()
+{
+	runLoop = TRUE;
+	CreateThread(NULL, 0, loop, NULL, 0, NULL);
+}
+
+void stopLoop()
+{
+	runLoop = FALSE;
+}
+
+
 
 // WinMain
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
@@ -65,26 +100,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	App_OnInit();
 	App_FullscreenDel(toggleFullscreen);
+	App_AnimationDel(startLoop, stopLoop);
 	App_QuitRequestDel(onQuitRequest);
 	
-	while (!quit) {
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			// handle or dispatch messages
-			if (msg.message == WM_QUIT) {
-				quit = TRUE;
-			} else {
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-		} else {
-			//render
-			App_OnUpdate();
-			App_OnRender();
-
-			//swap buffers
-			SwapBuffers(hDC);
-		}
+	while(GetMessage(&msg, NULL, 0, 0) > 0) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
 	}
+
+	stopLoop();
 
 	App_OnDestroy();
 	// shutdown OpenGL
@@ -93,11 +117,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// destroy the window explicitly
 	DestroyWindow(hWnd);
 	
-	//return (int)msg.wParam;
-	return 0;
+	return (int)msg.wParam;
 }
 
-BOOL enterFullscreen(HWND hWnd) {
+BOOL enterFullscreen(HWND hWnd) 
+{
     DEVMODE fullscreenSettings;
 
 	HDC windowHDC = GetDC(hWnd);
@@ -126,7 +150,8 @@ BOOL enterFullscreen(HWND hWnd) {
     return TRUE;
 }
 
-BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int windowedHeight, int windowedPaddingX, int windowedPaddingY) {
+BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int windowedHeight, int windowedPaddingX, int windowedPaddingY) 
+{
     BOOL isChangeSuccessful;
 
     SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_LEFT);
@@ -151,7 +176,7 @@ void toggleFullscreen()
 
 void onQuitRequest()
 {
-	quit = 1;
+	runLoop = FALSE;
 }
 
 /*inline cs_key_mod_t translateVK(int vk)
@@ -175,6 +200,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	//TODO: Unicode and Unichar
 	//static char ch[256];
 
+	InvalidateRect(hWnd, NULL, TRUE);
+
 	switch (message)
 	{
 	case WM_CREATE:
@@ -185,12 +212,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int w = LOWORD(lParam);
 			int h = HIWORD(lParam);
 			App_OnResize(w, h);
-			return 0;
 		}
+		return 0;
+
+	case WM_PAINT:
+		{
+			//render
+			App_OnUpdate();
+			App_OnRender();
+
+			//swap buffers
+			SwapBuffers(hDC);
+		}
+		return 0;
+
 	case WM_CLOSE:
 		PostQuitMessage(0);
 		return 0;
 	
+	case WM_QUIT:
+		return 0;
+
 	case WM_DESTROY:
 		return 0;
 
