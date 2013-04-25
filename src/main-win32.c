@@ -28,6 +28,7 @@ HDC hDC;
 HGLRC hRC;
 MSG msg;
 BOOL runLoop = FALSE;
+BOOL quit = FALSE;
 
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -45,13 +46,18 @@ DWORD WINAPI loop(LPVOID param)
 	int sleep_time = 0;
 
 	while(runLoop) {
-		InvalidateRect(hWnd, NULL, TRUE);
+		//static int i = 0;
+		//printf("%d yup", ++i);
+		//render
+		App_OnUpdate();
+		InvalidateRect(hWnd, NULL, FALSE);
 
 		next_game_tick += SKIP_TICKS;
 		sleep_time = next_game_tick - GetTickCount();
 
-		if(sleep_time >= 0) {
-			Sleep(sleep_time);
+		if(sleep_time > 0) {
+			//printf("sleep_time: %d\n", sleep_time);
+			Sleep(sleep_time / 4000);
 		}
 	}
 
@@ -103,7 +109,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	App_AnimationDel(startLoop, stopLoop);
 	App_QuitRequestDel(onQuitRequest);
 	
-	while(GetMessage(&msg, NULL, 0, 0) > 0) {
+	while(GetMessage(&msg, NULL, 0, 0) > 0 && !quit) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
@@ -177,6 +183,7 @@ void toggleFullscreen()
 void onQuitRequest()
 {
 	runLoop = FALSE;
+	quit = TRUE;
 }
 
 /*inline cs_key_mod_t translateVK(int vk)
@@ -200,8 +207,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	//TODO: Unicode and Unichar
 	//static char ch[256];
 
-	InvalidateRect(hWnd, NULL, TRUE);
-
 	switch (message)
 	{
 	case WM_CREATE:
@@ -217,8 +222,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_PAINT:
 		{
-			//render
-			App_OnUpdate();
 			App_OnRender();
 
 			//swap buffers
@@ -241,13 +244,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			char wide[3] = {0};
 			wide[0] = (char)wParam;
 
-			printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
+			//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
 			if((unsigned char)wide[0] > 31) {
 				App_OnKeyDown(wide, mods);
 			} else if(wide[0] > 0 && wide[0] <= 26) {
 				if(MODS_COMMAND(mods)) {
 					wide[0] += 'a'-1;
-					printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
+					//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
 					App_OnKeyDown(wide, mods);
 				} else {
 					switch(wide[0]) {
@@ -264,6 +267,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 			}
 		}
+		InvalidateRect(hWnd, NULL, FALSE);
 		return 0;
 		
 	case WM_KEYDOWN:
@@ -282,6 +286,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		default:
 			break;
 		}
+		InvalidateRect(hWnd, NULL, FALSE);
 		return 0;
 	case WM_KEYUP:
 		switch (wParam)
@@ -296,6 +301,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		default:
 			break;
 		}
+		InvalidateRect(hWnd, NULL, FALSE);
 		return 0;
 	default:
 		break;
