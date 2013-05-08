@@ -29,18 +29,42 @@ HGLRC hRC;
 MSG msg;
 BOOL runLoop = FALSE;
 BOOL quit = FALSE;
+BOOL rendering = FALSE;
 
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC);
-void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC);
-void toggleFullscreen();
-void onQuitRequest();
 
 #define FPS 25
-const int SKIP_TICKS = 1000 / FPS;
+static const int SKIP_TICKS = (10000 / FPS);
 
-DWORD WINAPI loop(LPVOID param)
+inline void render()
+{
+	if(!rendering) {
+		if(!rendering) {
+			rendering = TRUE;
+			App_OnRender();
+			SwapBuffers(hDC);
+			rendering = FALSE;
+		}
+	}
+    //glFinish();
+    //swap buffers
+}
+
+void uSleep(int waitTime)
+{
+	__int64 time1 = 0, time2 = 0, freq = 0;
+
+	QueryPerformanceCounter((LARGE_INTEGER *)&time1);
+	QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+
+	do {
+		QueryPerformanceCounter((LARGE_INTEGER *)&time2);
+    //} while ((((time2-time1)*1.0) / freq) < waitTime);
+	} while((time2-time1) < waitTime);
+}
+
+static DWORD WINAPI loop(LPVOID param)
 {
 	DWORD next_game_tick = GetTickCount();
 	int sleep_time = 0;
@@ -48,33 +72,127 @@ DWORD WINAPI loop(LPVOID param)
 	while(runLoop) {
 		//static int i = 0;
 		//printf("%d yup", ++i);
-		//render
 		App_OnUpdate();
-		InvalidateRect(hWnd, NULL, FALSE);
+		render();
 
 		next_game_tick += SKIP_TICKS;
 		sleep_time = next_game_tick - GetTickCount();
 
 		if(sleep_time > 0) {
 			//printf("sleep_time: %d\n", sleep_time);
-			Sleep(sleep_time / 4000);
+			uSleep(sleep_time >> 6);
 		}
 	}
 
 	return 0;
 }
 
-void startLoop()
+static void startLoop()
 {
 	runLoop = TRUE;
 	CreateThread(NULL, 0, loop, NULL, 0, NULL);
 }
 
-void stopLoop()
+static void stopLoop()
 {
 	runLoop = FALSE;
 }
 
+// Enable OpenGL
+
+static void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC)
+{
+	PIXELFORMATDESCRIPTOR pfd;
+	int format;
+	
+	// get the device context (DC)
+	*hDC = GetDC(hWnd);
+	
+	// set the pixel format for the DC
+	ZeroMemory(&pfd, sizeof(pfd));
+	pfd.nSize = sizeof(pfd);
+	pfd.nVersion = 1;
+	pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+	pfd.iPixelType = PFD_TYPE_RGBA;
+	pfd.cColorBits = 24;
+	pfd.cDepthBits = 16;
+	pfd.iLayerType = PFD_MAIN_PLANE;
+	format = ChoosePixelFormat(*hDC, &pfd);
+	SetPixelFormat(*hDC, format, &pfd);
+	
+	// create and enable the render context (RC)
+	*hRC = wglCreateContext(*hDC);
+	wglMakeCurrent(*hDC, *hRC);
+}
+
+// Disable OpenGL
+
+static void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC)
+{
+	wglMakeCurrent(NULL, NULL);
+	wglDeleteContext(hRC);
+	ReleaseDC(hWnd, hDC);
+}
+
+static BOOL enterFullscreen(HWND hWnd) 
+{
+    DEVMODE fullscreenSettings;
+
+	HDC windowHDC = GetDC(hWnd);
+	int fullscreenWidth  = GetDeviceCaps(windowHDC, HORZRES);
+	int fullscreenHeight = GetDeviceCaps(windowHDC, VERTRES);
+	int colourBits       = GetDeviceCaps(windowHDC, BITSPIXEL);
+	int refreshRate      = GetDeviceCaps(windowHDC, VREFRESH);
+
+    EnumDisplaySettings(NULL, 0, &fullscreenSettings);
+    fullscreenSettings.dmPelsWidth        = fullscreenWidth;
+    fullscreenSettings.dmPelsHeight       = fullscreenHeight;
+    fullscreenSettings.dmBitsPerPel       = colourBits;
+    fullscreenSettings.dmDisplayFrequency = refreshRate;
+    fullscreenSettings.dmFields           = DM_PELSWIDTH |
+                                            DM_PELSHEIGHT |
+                                            DM_BITSPERPEL |
+                                            DM_DISPLAYFREQUENCY;
+
+    SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST);
+    SetWindowLongPtr(hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, fullscreenWidth, fullscreenHeight, SWP_SHOWWINDOW);
+	//only need this line if changing the resolution
+    //isChangeSuccessful = ChangeDisplaySettings(&fullscreenSettings, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL;
+    ShowWindow(hWnd, SW_MAXIMIZE);
+
+    return TRUE;
+}
+
+static BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int windowedHeight, int windowedPaddingX, int windowedPaddingY) 
+{
+    BOOL isChangeSuccessful;
+
+    SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_LEFT);
+    SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+    isChangeSuccessful = ChangeDisplaySettings(NULL, CDS_RESET) == DISP_CHANGE_SUCCESSFUL;
+    SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, windowedWidth + windowedPaddingX, windowedHeight + windowedPaddingY, SWP_SHOWWINDOW);
+    ShowWindow(hWnd, SW_RESTORE);
+
+    return isChangeSuccessful;
+}
+
+static void toggleFullscreen()
+{
+	static BOOL fullscreen = FALSE;
+
+	if(!fullscreen) {
+		fullscreen = enterFullscreen(hWnd);
+	} else {
+		fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
+	}
+}
+
+static void onQuitRequest()
+{
+	runLoop = FALSE;
+	quit = TRUE;
+}
 
 
 // WinMain
@@ -126,66 +244,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	return (int)msg.wParam;
 }
 
-BOOL enterFullscreen(HWND hWnd) 
-{
-    DEVMODE fullscreenSettings;
-
-	HDC windowHDC = GetDC(hWnd);
-	int fullscreenWidth  = GetDeviceCaps(windowHDC, HORZRES);
-	int fullscreenHeight = GetDeviceCaps(windowHDC, VERTRES);
-	int colourBits       = GetDeviceCaps(windowHDC, BITSPIXEL);
-	int refreshRate      = GetDeviceCaps(windowHDC, VREFRESH);
-
-    EnumDisplaySettings(NULL, 0, &fullscreenSettings);
-    fullscreenSettings.dmPelsWidth        = fullscreenWidth;
-    fullscreenSettings.dmPelsHeight       = fullscreenHeight;
-    fullscreenSettings.dmBitsPerPel       = colourBits;
-    fullscreenSettings.dmDisplayFrequency = refreshRate;
-    fullscreenSettings.dmFields           = DM_PELSWIDTH |
-                                            DM_PELSHEIGHT |
-                                            DM_BITSPERPEL |
-                                            DM_DISPLAYFREQUENCY;
-
-    SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST);
-    SetWindowLongPtr(hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
-    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, fullscreenWidth, fullscreenHeight, SWP_SHOWWINDOW);
-	//only need this line if changing the resolution
-    //isChangeSuccessful = ChangeDisplaySettings(&fullscreenSettings, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL;
-    ShowWindow(hWnd, SW_MAXIMIZE);
-
-    return TRUE;
-}
-
-BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int windowedHeight, int windowedPaddingX, int windowedPaddingY) 
-{
-    BOOL isChangeSuccessful;
-
-    SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_LEFT);
-    SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
-    isChangeSuccessful = ChangeDisplaySettings(NULL, CDS_RESET) == DISP_CHANGE_SUCCESSFUL;
-    SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, windowedWidth + windowedPaddingX, windowedHeight + windowedPaddingY, SWP_SHOWWINDOW);
-    ShowWindow(hWnd, SW_RESTORE);
-
-    return isChangeSuccessful;
-}
-
-void toggleFullscreen()
-{
-	static BOOL fullscreen = FALSE;
-
-	if(!fullscreen) {
-		fullscreen = enterFullscreen(hWnd);
-	} else {
-		fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
-	}
-}
-
-void onQuitRequest()
-{
-	runLoop = FALSE;
-	quit = TRUE;
-}
-
 /*inline cs_key_mod_t translateVK(int vk)
 {
 	switch(vk)
@@ -221,12 +279,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 
 	case WM_PAINT:
-		{
-			App_OnRender();
-
-			//swap buffers
-			SwapBuffers(hDC);
-		}
+		render();
+		
 		return 0;
 
 	case WM_CLOSE:
@@ -308,40 +362,4 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 
 	return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
-// Enable OpenGL
-
-void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC)
-{
-	PIXELFORMATDESCRIPTOR pfd;
-	int format;
-	
-	// get the device context (DC)
-	*hDC = GetDC(hWnd);
-	
-	// set the pixel format for the DC
-	ZeroMemory(&pfd, sizeof(pfd));
-	pfd.nSize = sizeof(pfd);
-	pfd.nVersion = 1;
-	pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-	pfd.iPixelType = PFD_TYPE_RGBA;
-	pfd.cColorBits = 24;
-	pfd.cDepthBits = 16;
-	pfd.iLayerType = PFD_MAIN_PLANE;
-	format = ChoosePixelFormat(*hDC, &pfd);
-	SetPixelFormat(*hDC, format, &pfd);
-	
-	// create and enable the render context (RC)
-	*hRC = wglCreateContext(*hDC);
-	wglMakeCurrent(*hDC, *hRC);
-}
-
-// Disable OpenGL
-
-void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC)
-{
-	wglMakeCurrent(NULL, NULL);
-	wglDeleteContext(hRC);
-	ReleaseDC(hWnd, hDC);
 }
