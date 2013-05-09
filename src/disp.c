@@ -42,14 +42,14 @@ typedef enum {
 
 typedef struct {
 	int moving;
-	float amt;
-	float limit;
+	double amt;
+	double limit;
 	scrolling_dir_t dir;
 } scrolling_t;
 
 // Initialize the scroll amount values here, instead of in Init.
 // This way, the Disp can be recreated without reseting the scroll.
-static scrolling_t scroll = {0, 0.0f, 0.0f, SCROLL_UP};
+static scrolling_t scroll = {0, 0.0, 0.0, SCROLL_UP};
 
 static int scroll_requested = 0;
 static anim_del_t * anim_del = 0;
@@ -82,10 +82,14 @@ static
 void
 Disp_Scroll(float amt)
 {
-	static int step = 0;
+	static unsigned int step = 0;
 	
 	if((step < NUM_STEPS || scroll_requested)) {
+#if defined(_WIN32)
+		scroll.amt += amt*pow((double)(step + 1) / 100.0, 2.125);
+#else
 		scroll.amt += amt*pow(step, 0.7f);
+#endif
 		
 		if(scroll.amt < 0) {
 			scroll.amt = 0;
@@ -229,7 +233,7 @@ Disp_TypingScreen(Frame * frm)
 	int num_lines;
 	int first_line;
 	int show_cursor;
-	float scroll_amt;
+	double scroll_amt;
 	
 	scroll.limit = Frame_NumLines(frm) - 1;
 

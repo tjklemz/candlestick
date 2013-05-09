@@ -73,8 +73,8 @@ static DWORD WINAPI loop(LPVOID param)
 		//static int i = 0;
 		//printf("%d yup", ++i);
 		App_OnUpdate();
-		render();
-
+		//render();
+		InvalidateRect(hWnd, NULL, FALSE);
 		next_game_tick += SKIP_TICKS;
 		sleep_time = next_game_tick - GetTickCount();
 
@@ -280,7 +280,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_PAINT:
 		render();
-		
 		return 0;
 
 	case WM_CLOSE:
@@ -323,6 +322,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
 		return 0;
+
+	case WM_KEYUP:
+		switch (wParam)
+		{
+		case VK_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
+		case VK_LEFT:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
+		case VK_RIGHT:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
+		case VK_UP:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
+		case VK_DOWN:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
+		case VK_CONTROL:     mods ^= CS_CONTROL;                          break;
+		case VK_SHIFT:       mods ^= CS_SHIFT;                            break;
+		default:
+			break;
+		}
+		InvalidateRect(hWnd, NULL, FALSE);
+		return 0;
 		
 	case WM_KEYDOWN:
 		switch (wParam)
@@ -337,21 +352,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case VK_DOWN:        App_OnSpecialKeyDown(CS_ARROW_DOWN,mods);    break;
 		case VK_CONTROL:     mods |= CS_CONTROL;                          break;
 		case VK_SHIFT:       mods |= CS_SHIFT;                            break;
-		default:
-			break;
-		}
-		InvalidateRect(hWnd, NULL, FALSE);
-		return 0;
-	case WM_KEYUP:
-		switch (wParam)
-		{
-		case VK_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
-		case VK_LEFT:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
-		case VK_RIGHT:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
-		case VK_UP:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
-		case VK_DOWN:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
-		case VK_CONTROL:     mods ^= CS_CONTROL;                          break;
-		case VK_SHIFT:       mods ^= CS_SHIFT;                            break;
 		default:
 			break;
 		}
