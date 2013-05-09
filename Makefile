@@ -19,7 +19,7 @@ ARCHIVE = $(APPNAME).tar.bz2
 #  since this program links to Cocoa.
 # On Windows and Linux, the compile time is almost
 #  negligible.
-CC = cc -Wall -O2
+CC = cc -m32 -Wall -O2
 
 ifdef DEBUG
 	CC += -g
@@ -27,6 +27,7 @@ endif
 
 ifeq ($(OS),Windows_NT)
 	PLAT = win32
+	BINARY = $(APPNAME).exe
 else
 	UNAME = $(shell uname)
 	PLAT = nix
@@ -41,7 +42,7 @@ LIBDIR = lib/$(PLAT)
 RESDIR = res
 OUTDIR = package
 APPDIR = $(APPNAME)app
-MACAPP = $(BINARY).app
+MACAPP = $(APPNAME).app
 FONTDIR = $(RESDIR)/common/font
 
 # It's better to list out the source files than glob them.
@@ -94,9 +95,12 @@ CFLAGS = $(FREETYPE_INC)
 all: $(BINARY)
 
 $(BINARY): $(SOURCE)
-	@echo "\nCompiling sources in '$(SRCDIR)'...\n"
+	@echo
+	@echo "Compiling sources in '$(SRCDIR)'..."
+	@echo
 	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
-	@echo "\n...Done building."
+	@echo
+	@echo "...Done building."
 
 
 ######################################################################
@@ -109,7 +113,8 @@ package-mac: package-common $(RESDIR)/mac/*
 	@cp -a $(BINARY) $(OUTDIR)/$(APPDIR)/$(MACAPP)/Contents/MacOS
 	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)/$(MACAPP)/Contents/MacOS
 	@cd $(OUTDIR) && tar -cjf $(ARCHIVE) $(APPDIR)
-	@echo "Packaged $(APPNAME) into $(APPDIR)/$(MACAPP)\n"
+	@echo "Packaged $(APPNAME) into $(APPDIR)/$(MACAPP)"
+	@echo
 	@echo "Archived into $(OUTDIR)/$(ARCHIVE)"
 
 .PHONY: package-nix
@@ -126,12 +131,15 @@ package-win32: package-common $(RESDIR)/win32/*
 
 .PHONY: package-common
 package-common: $(BINARY) $(RESDIR)/common/*
-	@echo "\nPackaging $(APPNAME)..."
+	@echo
+	@echo "Packaging $(APPNAME)..."
 	@mkdir -p $(OUTDIR)/$(APPDIR)
 
 .PHONY: package
 package: package-$(PLAT)
-	@echo "\nDone packaging. See the $(APPDIR) folder.\n"
+	@echo
+	@echo "Done packaging. See the $(APPDIR) folder."
+	@echo
 
 
 ######################################################################
