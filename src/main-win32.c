@@ -37,7 +37,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 #define FPS 25
 static const int SKIP_TICKS = (10000 / FPS);
 
-inline void render()
+/*inline void render()
 {
 	if(!rendering) {
 		if(!rendering) {
@@ -49,7 +49,7 @@ inline void render()
 	}
     //glFinish();
     //swap buffers
-}
+}*/
 
 void uSleep(int waitTime)
 {
@@ -169,7 +169,7 @@ static BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidt
     BOOL isChangeSuccessful;
 
     SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_LEFT);
-    SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+    SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
     isChangeSuccessful = ChangeDisplaySettings(NULL, CDS_RESET) == DISP_CHANGE_SUCCESSFUL;
     SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, windowedWidth + windowedPaddingX, windowedHeight + windowedPaddingY, SWP_SHOWWINDOW);
     ShowWindow(hWnd, SW_RESTORE);
@@ -215,7 +215,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// create main window
 	hWnd = CreateWindow( 
 		(LPCSTR)APP_NAME, (LPCSTR)APP_NAME, 
-		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE,
+		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
 		0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
 		NULL, NULL, hInstance, NULL);
 	
@@ -241,7 +241,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// destroy the window explicitly
 	DestroyWindow(hWnd);
 	
-	return (int)msg.wParam;
+	return 0;
+	//return (int)msg.wParam;
 }
 
 /*inline cs_key_mod_t translateVK(int vk)
@@ -262,6 +263,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static cs_key_mod_t mods = CS_NONE;
+	//static unsigned int painting = 0;
 	//TODO: Unicode and Unichar
 	//static char ch[256];
 
@@ -276,10 +278,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int h = HIWORD(lParam);
 			App_OnResize(w, h);
 		}
+		InvalidateRect(hWnd, NULL, TRUE);
 		return 0;
 
 	case WM_PAINT:
-		render();
+		//printf("painting... %d\n", painting++);
+		App_OnRender();
+		SwapBuffers(hDC);
+		ValidateRect(hWnd, NULL);
 		return 0;
 
 	case WM_CLOSE:

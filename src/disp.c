@@ -157,11 +157,9 @@ static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
 static Fnt * fnt_heading = 0;
-static Fnt * fnt_heading_italic = 0;
 
-static const char * const fnt_reg_name = "./font/mplus-2m-regular.ttf";
-static const char * const fnt_heading_name = "./font/LeagueGothic-Regular.otf";
-static const char * const fnt_heading_italic_name = "./font/LeagueGothic-Italic.otf";
+static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
+static const char * const fnt_heading_name = "./font/LiberationSans-Bold.ttf";
 
 void
 Disp_Init(int fnt_size)
@@ -170,8 +168,7 @@ Disp_Init(int fnt_size)
 	scroll_requested = 0;
 	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
-	fnt_heading = Fnt_Init(fnt_heading_name, 100, 2);
-	fnt_heading_italic = Fnt_Init(fnt_heading_italic_name, 100, 2);
+	fnt_heading = Fnt_Init(fnt_heading_name, 60, 2);
 
 	glShadeModel(GL_SMOOTH);
     glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
@@ -187,7 +184,6 @@ Disp_Destroy()
 	Fnt_Destroy(fnt_reg);
 	//TODO: refactor the Fnt module so can use multiple fonts
 	//Fnt_Destroy(fnt_heading);
-	//Fnt_Destroy(fnt_heading_italic);
 }
 
 void
@@ -286,10 +282,10 @@ Disp_SaveScreen(char * filename)
 		HEADING_SEP_COL
 		PushScreenCoordMat();
 		glBegin(GL_QUADS);
-			glVertex2f(0, disp_y - 124);
-			glVertex2f(0, disp_y - 135);
+			glVertex2f(disp_x, disp_y - 134);
+			glVertex2f(disp_x, disp_y - 135);
 			glVertex2f(disp_w - disp_x, disp_y - 135);
-			glVertex2f(disp_w - disp_x, disp_y - 124);
+			glVertex2f(disp_w - disp_x, disp_y - 134);
 		glEnd();
 
 #define BOX_TOP 32
@@ -310,23 +306,24 @@ Disp_SaveScreen(char * filename)
 			glVertex2f(disp_w - disp_x, disp_y - BOX_TOP);
 			glVertex2f(disp_x, disp_y - BOX_TOP);
 			//the frame line at the bottom
-			glVertex2f(disp_x, disp_y + 110);
-			glVertex2f(disp_w - disp_x, disp_y + 110);
+			glVertex2f(disp_x, disp_y + 120);
+			glVertex2f(disp_w - disp_x, disp_y + 120);
 		glEnd();
 		PopScreenCoordMat();
 
 		HEADING_COL
-		Fnt_Print(fnt_heading, "SAVE...", disp_x, disp_y - 140, 0);
+		Fnt_Print(fnt_heading, "save", disp_x, disp_y - 135, 0);
 		
 		TEXT_COL
 
-		Fnt_SetSize(fnt_heading, orig_size * 0.3);
-		Fnt_Print(fnt_heading, "Enter a filename:", disp_x, disp_y - 45, 0);
+		Fnt_SetSize(fnt_heading, orig_size * 0.35);
+		Fnt_Print(fnt_heading, "Enter a filename:", disp_x, disp_y - 40, 0);
 
-		Fnt_SetSize(fnt_heading, orig_size * 0.22);
-		Fnt_Print(fnt_heading, "Press enter when done. The .txt extension is added automatically.", disp_x, disp_y + 100, 0);
+		Fnt_SetSize(fnt_heading, orig_size * 0.25);
+		Fnt_Print(fnt_heading, "Press enter when done. The .txt extension is added automatically.", disp_x, disp_y + 114, 0);
 		Fnt_SetSize(fnt_heading, orig_size);
 
+		glColor3ub(16, 16, 16);
 		Fnt_Print(fnt_reg, filename, disp_x + 10, disp_y, 1);
 		//Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
 		
@@ -350,10 +347,10 @@ Disp_OpenScreen(Node * files)
 		//draw a line for the heading
 		HEADING_SEP_COL
 		glBegin(GL_QUADS);
-			glVertex2f(0, 115);
-			glVertex2f(0, 125);
-			glVertex2f(disp_w - disp_x, 125);
-			glVertex2f(disp_w - disp_x, 115);
+			glVertex2f(disp_x, 110);
+			glVertex2f(disp_x, 111);
+			glVertex2f(disp_w - disp_x, 111);
+			glVertex2f(disp_w - disp_x, 110);
 		glEnd();
 
 		LINES_COL
@@ -365,15 +362,15 @@ Disp_OpenScreen(Node * files)
 		
 		HEADING_COL
 		//print header
-		Fnt_Print(fnt_heading, "OPEN...", disp_x, 110, 0);
+		Fnt_Print(fnt_heading, "open", disp_x, 110, 0);
 		
-		Fnt_SetSize(fnt_heading_italic, orig_size * 0.4);
+		Fnt_SetSize(fnt_heading, orig_size * 0.4);
 		
 		TEXT_COL
 
 		//print files
 		if(!files) {
-			Fnt_Print(fnt_heading_italic, "No files.", disp_x, 185, 0);
+			Fnt_Print(fnt_heading, "No files.", disp_x, 165, 0);
 		} else {
 			//int sel_box_x1 = disp_x;
 			//int sel_box_x2 = sel_box_x1 + 200;
@@ -395,9 +392,8 @@ Disp_OpenScreen(Node * files)
 				glEnd();*/
 
 				//if(sel_line == line)
-
-				Fnt_SetSize(fnt_heading, orig_size * 0.4);
-				Fnt_Print(fnt_heading, (char*)cur->data, disp_x, 185 + 60*line, 0);
+				
+				Fnt_Print(fnt_heading, (char*)cur->data, disp_x, 165 + 40*line, 0);
 			}
 		}
 		
