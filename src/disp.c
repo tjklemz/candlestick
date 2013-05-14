@@ -84,9 +84,9 @@ Disp_Scroll(float amt)
 {	
 	if((scroll.step < NUM_STEPS || scroll.requested)) {
 #if defined(_WIN32)
-		scroll.amt += amt*pow((double)(scroll.step + 1) / 100.0, 2.125);
+		scroll.amt += amt*pow((double)scroll.step / 100.0, 2.125);
 #else
-		scroll.amt += amt*pow(step, 0.7f);
+		scroll.amt += amt*pow((double)scroll.step / 100.0, 1.22);
 #endif
 		
 		if(scroll.amt < 0) {
@@ -384,7 +384,7 @@ Disp_SaveScreen(char * filename)
 		PushScreenCoordMat();
 
 		DRAWING_COLOR
-		Disp_DrawSaveIcon(disp_x, disp_y - 76);
+		Disp_DrawSaveIcon(disp_x, disp_y - 84);
 		Disp_DrawInputBox(disp_x, disp_w - disp_x, disp_y);
 
 		PopScreenCoordMat();
