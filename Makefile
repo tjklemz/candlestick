@@ -19,7 +19,7 @@ ARCHIVE = $(APPNAME).tar.bz2
 #  since this program links to Cocoa.
 # On Windows and Linux, the compile time is almost
 #  negligible.
-CC = cc -m32 -Wall -O2
+CC = cc -Wall -O2
 
 ifdef DEBUG
 	CC += -g
@@ -35,6 +35,12 @@ else
 	ifeq ($(UNAME),Darwin)
 		PLAT = mac
 	endif
+endif
+
+# Mac OS X now requires 64-bit.
+# Everything else though should be 32-bit for compatibility.
+ifneq ($(PLAT),mac)
+	CC += -m32
 endif
 
 SRCDIR = src

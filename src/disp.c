@@ -41,6 +41,8 @@ typedef enum {
 } scrolling_dir_t;
 
 typedef struct {
+	int requested;
+	unsigned int step;
 	int moving;
 	double amt;
 	double limit;
@@ -49,9 +51,7 @@ typedef struct {
 
 // Initialize the scroll amount values here, instead of in Init.
 // This way, the Disp can be recreated without reseting the scroll.
-static scrolling_t scroll = {0, 0.0, 0.0, SCROLL_UP};
-
-static int scroll_requested = 0;
+static scrolling_t scroll = {0, 0, 0, 0.0, 0.0, SCROLL_UP};
 static anim_del_t * anim_del = 0;
 
 static
@@ -69,7 +69,7 @@ static
 void
 Disp_AnimEnd()
 {
-	if(!scroll_requested && !scroll.moving) {
+	if(!scroll.requested && !scroll.moving) {
 		if(anim_del && !anim_del->called_end) {
 			anim_del->on_end();
 			anim_del->called_end = 1;
@@ -81,12 +81,10 @@ Disp_AnimEnd()
 static
 void
 Disp_Scroll(float amt)
-{
-	static unsigned int step = 0;
-	
-	if((step < NUM_STEPS || scroll_requested)) {
+{	
+	if((scroll.step < NUM_STEPS || scroll.requested)) {
 #if defined(_WIN32)
-		scroll.amt += amt*pow((double)(step + 1) / 100.0, 2.125);
+		scroll.amt += amt*pow((double)(scroll.step + 1) / 100.0, 2.125);
 #else
 		scroll.amt += amt*pow(step, 0.7f);
 #endif
@@ -97,10 +95,10 @@ Disp_Scroll(float amt)
 			scroll.amt = scroll.limit;
 		}
 		scroll.moving = 1;
-		++step;
+		++scroll.step;
 	} else {
 		scroll.moving = 0;
-		step = 0;
+		scroll.step = 0;
 		
 		Disp_AnimEnd();
 	}
@@ -116,7 +114,7 @@ Disp_Scroll(float amt)
 void
 Disp_ScrollUpRequested()
 {
-	scroll_requested = 1;
+	scroll.requested = 1;
 	scroll.dir = SCROLL_UP;
 	
 	Disp_AnimStart();
@@ -125,7 +123,7 @@ Disp_ScrollUpRequested()
 void
 Disp_ScrollDownRequested()
 {
-	scroll_requested = 1;
+	scroll.requested = 1;
 	scroll.dir = SCROLL_DOWN;
 	
 	Disp_AnimStart();
@@ -134,13 +132,14 @@ Disp_ScrollDownRequested()
 void
 Disp_ScrollStopRequested()
 {
-	scroll_requested = 0;
+	scroll.requested = 0;
 }
 
 void
 Disp_ScrollReset()
 {
-	scroll_requested = 0;
+	scroll.requested = 0;
+	scroll.step = 0;
 	scroll.moving = 0;
 	scroll.amt = 0;
 	scroll.dir = SCROLL_UP; // doesn't matter, but good to know the state
@@ -156,21 +155,22 @@ Disp_ScrollReset()
 static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
-static Fnt * fnt_heading = 0;
 
 static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
-static const char * const fnt_heading_name = "./font/LiberationSans-Bold.ttf";
+
+#define TEXT_COLOR     glColor3ub(50, 31, 20);
+#define DRAWING_COLOR  glColor3ub(64, 64, 64);
 
 void
 Disp_Init(int fnt_size)
 {
 	scroll.moving = 0;
-	scroll_requested = 0;
+	scroll.requested = 0;
 	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
-	fnt_heading = Fnt_Init(fnt_heading_name, 60, 2);
 
 	glShadeModel(GL_SMOOTH);
+	//NOTE: background color matched with TEXT_COLOR
     glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
     glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -182,8 +182,7 @@ void
 Disp_Destroy()
 {
 	Fnt_Destroy(fnt_reg);
-	//TODO: refactor the Fnt module so can use multiple fonts
-	//Fnt_Destroy(fnt_heading);
+	//NOTE: should refactor the Fnt module so can use multiple fonts
 }
 
 void
@@ -192,14 +191,14 @@ Disp_BeginRender()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 	glTranslatef(0.0f, 0.0f, -1.0f);
-	glColor3ub(50, 31, 20);
+	TEXT_COLOR
 }
 
 void
 Disp_Update()
 {
 	// if scrolling, update the animation
-	if(scroll.moving || scroll_requested) {
+	if(scroll.moving || scroll.requested) {
 		switch(scroll.dir) {
 		case SCROLL_UP:
 			Disp_Scroll(STEP_AMT);
@@ -256,76 +255,142 @@ Disp_TypingScreen(Frame * frm)
 	//printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
 
 	glPushMatrix();
-		glColor3ub(50, 31, 20);
+		TEXT_COLOR
 		glLoadIdentity();
 		Fnt_PrintFrame(fnt_reg, frm, disp_x, disp_y, num_lines + DISP_LINE_PADDING, show_cursor);
 	glPopMatrix();
 }
 
-#define HEADING_SEP_COL glColor3ub(0, 161, 154);
-#define HEADING_COL     glColor3ub(0, 161, 154);
-#define LINES_COL       glColor3ub(0, 161, 154);
-#define TEXT_COL        glColor3ub(64, 64, 64);
+static
+void
+Disp_DrawSaveIcon(int x, int y)
+{
+	//N.B. Everything assumes (0,0) is top left corner
+	float h = 100.0f;
+	float w = 100.0f;
+	float l_w = 15.0f;
+	float b_h = 10.0f;
+	// the right side is a polygon, so multiple parts
+	// r1: the right vertical strip
+	float r1_w = 12.0f;
+	// r2: the middle horizontal strip
+	float r2_h = 12.0f;
+	float r2_h2 = b_h + 26.0f;
+	// r3: the strip of the tip
+	float r3_w = 10.0f;
+	// r4: the triangle of the tip
+	float r4_w = 25.0f;
+	float r4_h = 20.0f;
+
+	/*glPushAttrib(GL_POLYGON_BIT | GL_LINE_BIT | GL_COLOR_BUFFER_BIT);
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	glEnable(GL_POLYGON_SMOOTH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
+
+	glPushMatrix();
+	glTranslatef(x, y, 0.0f);
+	glScalef(0.4f, 0.4f, 1.0f);
+
+	glBegin(GL_QUADS);
+		// left side
+		glVertex2f(0.0f, 0.0f);
+		glVertex2f(0.0f, h);
+		glVertex2f(l_w, h);
+		glVertex2f(l_w, 0.0f);
+
+		// bottom strip
+		glVertex2f(l_w, h - b_h);
+		glVertex2f(l_w, h);
+		glVertex2f(w - r1_w, h);
+		glVertex2f(w - r1_w, h - b_h);
+
+		// right side
+		glVertex2f(w - r1_w, h);
+		glVertex2f(w - r1_w, r2_h2);
+		glVertex2f(w, r2_h2 + r2_h);
+		glVertex2f(w, h);
+
+		// horizontal strip
+		glVertex2f(l_w, r2_h2);
+		glVertex2f(l_w, r2_h2 + r2_h);
+		glVertex2f(w - r4_w - r3_w, r2_h2 + r2_h);
+		glVertex2f(w - r4_w - r3_w, r2_h2);
+
+		// the two lines representing text
+		// bottom:
+		glVertex2f(l_w * 1.75, h - b_h * 2.0);
+		glVertex2f(l_w * 1.75, h - b_h * 2.5);
+		glVertex2f(w - r1_w * 1.9, h - b_h * 2.5);
+		glVertex2f(w - r1_w * 1.9, h - b_h * 2.0);
+
+		// top:
+		glVertex2f(l_w * 1.75, h - b_h * 3.75);
+		glVertex2f(l_w * 1.75, h - b_h * 4.25);
+		glVertex2f(w - r1_w * 1.9, h - b_h * 4.25);
+		glVertex2f(w - r1_w * 1.9, h - b_h * 3.75);
+
+		// the "slider" on top
+		glVertex2f(w - r4_w - 1.84 * r3_w, -0.45 * r2_h + r2_h2);
+		glVertex2f(w - r4_w - 1.84 * r3_w, r3_w * 0.374);
+		glVertex2f(w - r4_w - 3.7 * r3_w, r3_w * 0.374);
+		glVertex2f(w - r4_w - 3.7 * r3_w, -0.45 * r2_h + r2_h2);
+	glEnd();
+	glBegin(GL_POLYGON);
+		// triangle-like shape (tip)
+		glVertex2f(w - r4_w - r3_w, r2_h2 + r2_h);
+		glVertex2f(w - r4_w - r3_w, 0.0f);
+		glVertex2f(w - r4_w, 0.0f);
+		glVertex2f(w, r4_h);
+		glVertex2f(w, r2_h2 + r2_h);
+	glEnd();
+
+	glPopMatrix();
+
+	//glPopAttrib();
+}
+
+static
+void
+Disp_DrawInputBox(int left, int right, int middle)
+{
+	static const int BOX_TOP = 32;
+	static const int BOX_BOT = 14;
+
+	glPushAttrib(GL_POLYGON_BIT);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	
+	glBegin(GL_QUADS);
+
+	glVertex2f(left, middle - BOX_TOP);
+	glVertex2f(left, middle + BOX_BOT);
+	glVertex2f(right, middle + BOX_BOT);
+	glVertex2f(right, middle - BOX_TOP);
+
+	glEnd();
+	
+	glPopAttrib();
+}
 
 void
 Disp_SaveScreen(char * filename)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
 	float disp_y = disp_h / 2;
-	//float line_height = Fnt_LineHeight(fnt_reg) * 1.25 * Fnt_Width(fnt_reg);
-	
-	float orig_size = Fnt_Size(fnt_heading);
 	
 	glPushMatrix();
 		glLoadIdentity();
 
-		HEADING_SEP_COL
 		PushScreenCoordMat();
-		glBegin(GL_QUADS);
-			glVertex2f(disp_x, disp_y - 134);
-			glVertex2f(disp_x, disp_y - 135);
-			glVertex2f(disp_w - disp_x, disp_y - 135);
-			glVertex2f(disp_w - disp_x, disp_y - 134);
-		glEnd();
 
-#define BOX_TOP 32
-#define BOX_BOT 14
+		DRAWING_COLOR
+		Disp_DrawSaveIcon(disp_x, disp_y - 76);
+		Disp_DrawInputBox(disp_x, disp_w - disp_x, disp_y);
 
-		LINES_COL
-		glBegin(GL_LINES);
-			//the box around the filename
-			glVertex2f(disp_x, disp_y - BOX_TOP);
-			glVertex2f(disp_x, disp_y + BOX_BOT);
-
-			glVertex2f(disp_x, disp_y + BOX_BOT);
-			glVertex2f(disp_w - disp_x, disp_y + BOX_BOT);
-
-			glVertex2f(disp_w - disp_x, disp_y + BOX_BOT);
-			glVertex2f(disp_w - disp_x, disp_y - BOX_TOP);
-
-			glVertex2f(disp_w - disp_x, disp_y - BOX_TOP);
-			glVertex2f(disp_x, disp_y - BOX_TOP);
-			//the frame line at the bottom
-			glVertex2f(disp_x, disp_y + 120);
-			glVertex2f(disp_w - disp_x, disp_y + 120);
-		glEnd();
 		PopScreenCoordMat();
-
-		HEADING_COL
-		Fnt_Print(fnt_heading, "save", disp_x, disp_y - 135, 0);
 		
-		TEXT_COL
-
-		Fnt_SetSize(fnt_heading, orig_size * 0.35);
-		Fnt_Print(fnt_heading, "Enter a filename:", disp_x, disp_y - 40, 0);
-
-		Fnt_SetSize(fnt_heading, orig_size * 0.25);
-		Fnt_Print(fnt_heading, "Press enter when done. The .txt extension is added automatically.", disp_x, disp_y + 114, 0);
-		Fnt_SetSize(fnt_heading, orig_size);
-
-		glColor3ub(16, 16, 16);
+		TEXT_COLOR
 		Fnt_Print(fnt_reg, filename, disp_x + 10, disp_y, 1);
-		//Fnt_Print(fnt_reg, ".txt", x, disp_y, 0);
 		
 	glPopMatrix();
 }
@@ -335,7 +400,6 @@ Disp_OpenScreen(Node * files)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
 	float disp_y = disp_h / 2;
-	float orig_size = Fnt_Size(fnt_heading);
 	Node * cur;
 	int line;
 	
@@ -343,34 +407,23 @@ Disp_OpenScreen(Node * files)
 		glLoadIdentity();
 
 		PushScreenCoordMat();
+
+		DRAWING_COLOR
 		
 		//draw a line for the heading
-		HEADING_SEP_COL
-		glBegin(GL_QUADS);
-			glVertex2f(disp_x, 110);
-			glVertex2f(disp_x, 111);
-			glVertex2f(disp_w - disp_x, 111);
-			glVertex2f(disp_w - disp_x, 110);
-		glEnd();
-
-		LINES_COL
 		glBegin(GL_LINES);
-			//the frame line at the bottom
-			glVertex2f(disp_x, disp_y + 110);
-			glVertex2f(disp_w - disp_x, disp_y + 110);
+			glVertex2f(disp_x, 114);
+			glVertex2f(disp_w - disp_x, 114);
 		glEnd();
 		
-		HEADING_COL
 		//print header
-		Fnt_Print(fnt_heading, "open", disp_x, 110, 0);
+		Fnt_Print(fnt_reg, "Open", disp_x, 110, 0);
 		
-		Fnt_SetSize(fnt_heading, orig_size * 0.4);
-		
-		TEXT_COL
+		TEXT_COLOR
 
 		//print files
 		if(!files) {
-			Fnt_Print(fnt_heading, "No files.", disp_x, 165, 0);
+			Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
 		} else {
 			//int sel_box_x1 = disp_x;
 			//int sel_box_x2 = sel_box_x1 + 200;
@@ -393,11 +446,9 @@ Disp_OpenScreen(Node * files)
 
 				//if(sel_line == line)
 				
-				Fnt_Print(fnt_heading, (char*)cur->data, disp_x, 165 + 40*line, 0);
+				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + 40*line, 0);
 			}
 		}
-		
-		Fnt_SetSize(fnt_heading, orig_size);
 		
 		PopScreenCoordMat();
 	glPopMatrix();
