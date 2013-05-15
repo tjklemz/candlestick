@@ -279,7 +279,7 @@ Disp_DrawSaveIcon(int x, int y)
 	// r3: the strip of the tip
 	float r3_w = 10.0f;
 	// r4: the triangle of the tip
-	float r4_w = 25.0f;
+	float r4_w = 22.0f;
 	float r4_h = 20.0f;
 
 	/*glPushAttrib(GL_POLYGON_BIT | GL_LINE_BIT | GL_COLOR_BUFFER_BIT);
@@ -330,7 +330,7 @@ Disp_DrawSaveIcon(int x, int y)
 		glVertex2f(w - r1_w * 1.9, h - b_h * 4.25);
 		glVertex2f(w - r1_w * 1.9, h - b_h * 3.75);
 
-		// the "slider" on top
+		// the "slider" square on top
 		glVertex2f(w - r4_w - 1.84 * r3_w, -0.45 * r2_h + r2_h2);
 		glVertex2f(w - r4_w - 1.84 * r3_w, r3_w * 0.374);
 		glVertex2f(w - r4_w - 3.7 * r3_w, r3_w * 0.374);
