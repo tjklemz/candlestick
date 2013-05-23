@@ -37,14 +37,15 @@ else
 	endif
 endif
 
-# Mac OS X now requires 64-bit.
-# Everything else though should be 32-bit for compatibility.
-ifneq ($(PLAT),mac)
+ifeq ($(PLAT),win32)
 	CC += -m32
-endif
+	ARCH = x86
+else
+	ARCH = x$(shell getconf LONG_BIT)
+endif	
 
 SRCDIR = src
-LIBDIR = lib/$(PLAT)
+LIBDIR = lib/$(PLAT)/$(ARCH)
 RESDIR = res
 OUTDIR = package
 APPDIR = $(APPNAME)app
