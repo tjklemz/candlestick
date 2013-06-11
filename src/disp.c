@@ -29,126 +29,6 @@
 
 
 /**************************************************************************
- * Scrolling and Animation
- **************************************************************************/
-
-#define NUM_STEPS 22
-#define STEP_AMT (0.0006f)
-
-typedef enum {
-	SCROLL_UP,
-	SCROLL_DOWN
-} scrolling_dir_t;
-
-typedef struct {
-	int requested;
-	unsigned int step;
-	int moving;
-	double amt;
-	double limit;
-	scrolling_dir_t dir;
-} scrolling_t;
-
-// Initialize the scroll amount values here, instead of in Init.
-// This way, the Disp can be recreated without reseting the scroll.
-static scrolling_t scroll = {0, 0, 0, 0.0, 0.0, SCROLL_UP};
-static anim_del_t * anim_del = 0;
-
-static
-void
-Disp_AnimStart()
-{
-	if(anim_del && !anim_del->called_start) {
-		anim_del->on_start();
-		anim_del->called_start = 1;
-		anim_del->called_end = 0;
-	}
-}
-
-static
-void
-Disp_AnimEnd()
-{
-	if(!scroll.requested && !scroll.moving) {
-		if(anim_del && !anim_del->called_end) {
-			anim_del->on_end();
-			anim_del->called_end = 1;
-			anim_del->called_start = 0;
-		}
-	}
-}
-
-static
-void
-Disp_Scroll(float amt)
-{	
-	if((scroll.step < NUM_STEPS || scroll.requested)) {
-#if defined(_WIN32)
-		scroll.amt += amt*pow((double)scroll.step / 100.0, 2.125);
-#else
-		scroll.amt += amt*pow((double)scroll.step / 100.0, 1.22);
-#endif
-		
-		if(scroll.amt < 0) {
-			scroll.amt = 0;
-		} else if(scroll.amt > scroll.limit) {
-			scroll.amt = scroll.limit;
-		}
-		scroll.moving = 1;
-		++scroll.step;
-	} else {
-		scroll.moving = 0;
-		scroll.step = 0;
-		
-		Disp_AnimEnd();
-	}
-}
-
-// How about pass in the Frame and have Display set the begin and end?
-// (since must know about the screen size, etc)
-// Like a scroll module, almost.
-
-// Have Disp calc how many lines to display? Then pass in to Frame?
-// How to know where to begin, though? Also, the top (when to stop scrolling)
-
-void
-Disp_ScrollUpRequested()
-{
-	scroll.requested = 1;
-	scroll.dir = SCROLL_UP;
-	
-	Disp_AnimStart();
-}
-
-void
-Disp_ScrollDownRequested()
-{
-	scroll.requested = 1;
-	scroll.dir = SCROLL_DOWN;
-	
-	Disp_AnimStart();
-}
-
-void
-Disp_ScrollStopRequested()
-{
-	scroll.requested = 0;
-}
-
-void
-Disp_ScrollReset()
-{
-	scroll.requested = 0;
-	scroll.step = 0;
-	scroll.moving = 0;
-	scroll.amt = 0;
-	scroll.dir = SCROLL_UP; // doesn't matter, but good to know the state
-	
-	Disp_AnimEnd();
-}
-
-
-/**************************************************************************
  * Display
  **************************************************************************/
 
@@ -163,10 +43,7 @@ static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 
 void
 Disp_Init(int fnt_size)
-{
-	scroll.moving = 0;
-	scroll.requested = 0;
-	
+{	
 	fnt_reg = Fnt_Init(fnt_reg_name, fnt_size, LINE_HEIGHT);
 
 	glShadeModel(GL_SMOOTH);
@@ -194,30 +71,12 @@ Disp_BeginRender()
 	TEXT_COLOR
 }
 
-void
-Disp_Update()
-{
-	// if scrolling, update the animation
-	if(scroll.moving || scroll.requested) {
-		switch(scroll.dir) {
-		case SCROLL_UP:
-			Disp_Scroll(STEP_AMT);
-			break;
-		case SCROLL_DOWN:
-			Disp_Scroll(-STEP_AMT);
-			break;
-		default:
-			break;
-		}
-	}
-}
-
 #define DISP_LINE_PADDING 2
 
 //Frame is passed in, since input needs to deal with the Frame
 // and Display does not handle input, but only displaying
 void
-Disp_TypingScreen(Frame * frm)
+Disp_TypingScreen(Frame * frm, scrolling_t * scroll)
 {	
 	//window coords for start of frame
 	float fnt_width = Fnt_Width(fnt_reg);
@@ -230,9 +89,9 @@ Disp_TypingScreen(Frame * frm)
 	int show_cursor;
 	double scroll_amt;
 	
-	scroll.limit = Frame_NumLines(frm) - 1;
+	scroll->limit = Frame_NumLines(frm) - 1;
 
-	scroll_amt = scroll.amt;
+	scroll_amt = scroll->amt;
 	
 	// figure out num lines
 	num_lines = (int)ceil(disp_h / line_height);
@@ -396,12 +255,14 @@ Disp_SaveScreen(char * filename)
 }
 
 void
-Disp_OpenScreen(Node * files)
+Disp_OpenScreen(Node * files, scrolling_t * scroll)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
 	float disp_y = disp_h / 2;
 	Node * cur;
 	int line;
+	
+	scroll->limit = 10;
 	
 	glPushMatrix();
 		glLoadIdentity();
@@ -418,35 +279,30 @@ Disp_OpenScreen(Node * files)
 		
 		//print header
 		Fnt_Print(fnt_reg, "Open", disp_x, 110, 0);
-		
-		TEXT_COLOR
 
 		//print files
 		if(!files) {
+			TEXT_COLOR
 			Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
 		} else {
-			//int sel_box_x1 = disp_x;
-			//int sel_box_x2 = sel_box_x1 + 200;
-			//int sel_box_y1 = -scroll.amt*10;
-			//int sel_box_y2 = sel_box_y1 + 100;
+			int line_height = 40;
+			int sel_box_x1 = disp_x - 30;
+			int sel_box_x2 = sel_box_x1 + 20;
+			int sel_box_y1 = 143 + -scroll->amt*line_height;
+			int sel_box_y2 = sel_box_y1 + 15;
 
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
-				/*glColor3ub(30, 30, 30);
-
+				DRAWING_COLOR
+				
 				glBegin(GL_QUADS);
 					glVertex2f(sel_box_x1, sel_box_y1);
 					glVertex2f(sel_box_x1, sel_box_y2);
 					glVertex2f(sel_box_x2, sel_box_y2);
 					glVertex2f(sel_box_x2, sel_box_y1);
-					//glVertex2f(disp_x - 20, 140 - 40*line);
-					//glVertex2f(disp_x - 20, 140 + 40*line);
-					//glVertex2f(disp_w - disp_x + 20, 140 + 40*line);
-					//glVertex2f(disp_w - disp_x + 20, 140 - 40*line);
-				glEnd();*/
-
-				//if(sel_line == line)
+				glEnd();
 				
-				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + 40*line, 0);
+				TEXT_COLOR
+				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
 			}
 		}
 		
@@ -476,10 +332,4 @@ Disp_Resize(int w, int h)
     gluPerspective(45.0f, ratio, 0.1f, 100.0f);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-}
-
-void
-Disp_AnimationDel(anim_del_t * the_anim_del)
-{
-	anim_del = the_anim_del;
 }

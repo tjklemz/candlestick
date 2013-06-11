@@ -56,11 +56,16 @@ typedef enum {
 static Frame * frm = 0;
 static Line * filename = 0;
 static Line * filename_buf = 0;
+static Node * files = 0;
+
 static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
 static quit_del_func_t quit_del = 0;
+
 static cs_app_state_t app_state = CS_TYPING;
-static Node * files = 0;
+static scrolling_t open_scroll = {0};
+static scrolling_t text_scroll = {0};
+static scrolling_t * cur_scroll;
 
 #if defined(__APPLE__)
 // assumes exe lives in Appname.app/Contents/MacOS
@@ -69,7 +74,8 @@ static Node * files = 0;
 #    define DOCS_FOLDER "./documents/"
 #endif
 
-#define MAX_FILE_CHARS 60
+#define EXT_LEN 4
+#define MAX_FILE_CHARS (CHARS_PER_LINE - EXT_LEN)
 
 void
 App_OnInit()
@@ -86,11 +92,14 @@ App_OnInit()
 		frm = Frame_Init();
 	} else {
 		Disp_Destroy();
+		text_scroll.requested = 0;
+		open_scroll.requested = 0;
 	}
 	
 	Disp_Init(FONT_SIZE);
 	
 	app_state = CS_TYPING;
+	cur_scroll = &text_scroll;
 }
 
 static
@@ -140,13 +149,13 @@ App_OnRender()
 	
 	switch(app_state) {
 	case CS_TYPING:
-		Disp_TypingScreen(frm);
+		Disp_TypingScreen(frm, &text_scroll);
 		break;
 	case CS_SAVING:
 		Disp_SaveScreen(Line_Text(filename_buf));
 		break;
 	case CS_OPENING:
-		Disp_OpenScreen(files);
+		Disp_OpenScreen(files, &open_scroll);
 		break;
 	default:
 		puts("Not ok! What is being rendered?");
@@ -157,7 +166,11 @@ App_OnRender()
 void
 App_OnUpdate()
 {
-	Disp_Update();
+	if(cur_scroll) {
+		if(cur_scroll->moving || cur_scroll->requested) {
+			Scroll_Update(cur_scroll);
+		}
+	}
 }
 
 void
@@ -166,7 +179,9 @@ App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods)
 	switch(key) {
 	case CS_ARROW_UP:
 	case CS_ARROW_DOWN:
-		Disp_ScrollStopRequested();
+		if(cur_scroll) {
+			Scroll_StopRequested(cur_scroll);
+		}
 		break;
 	default:
 		break;
@@ -178,18 +193,24 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 {
 	switch(key) {
 	case CS_ARROW_UP:
-		Disp_ScrollUpRequested();
+		if(cur_scroll) {
+			Scroll_UpRequested(cur_scroll);
+		}
 		break;
 	case CS_ARROW_DOWN:
-		Disp_ScrollDownRequested();
+		if(cur_scroll) {
+			Scroll_DownRequested(cur_scroll);
+		}
 		break;
 	case CS_ESCAPE:
 		if(app_state == CS_SAVING) {
 			app_state = CS_TYPING;
+			cur_scroll = &text_scroll;
 			Line_Destroy(filename_buf);
 			filename_buf = 0;
 		} else if(app_state == CS_OPENING) {
 			app_state = CS_TYPING;
+			cur_scroll = &text_scroll;
 		}
 		break;
 	default:
@@ -474,6 +495,7 @@ App_OnCharSave(char * ch)
 			App_SaveAs();
 
 			app_state = CS_TYPING;
+			cur_scroll = &text_scroll;
 		}
 		break;
 	case 127:
@@ -490,9 +512,7 @@ App_OnCharSave(char * ch)
 
 void
 App_OnKeyDown(char * ch, cs_key_mod_t mods)
-{
-	Disp_ScrollReset();
-	
+{	
 	if(MODS_COMMAND(mods)) {
 		switch(*ch) {
 		case 'f':
@@ -505,6 +525,8 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			puts("open command combo...");
 			if(app_state == CS_TYPING) {
 				app_state = CS_OPENING;
+				cur_scroll = &open_scroll;
+				Scroll_Reset(cur_scroll);
 				App_PopulateFiles();
 			}
 			break;
@@ -519,6 +541,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			if(app_state == CS_TYPING) {
 				if(!filename) {
 					app_state = CS_SAVING;
+					cur_scroll = NULL;
 					filename_buf = Line_Init(CHARS_PER_LINE);
 				} else {
 					App_Save();
@@ -531,6 +554,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 		}
 	} else {
 		if(app_state == CS_TYPING) {
+			Scroll_Reset(&text_scroll);
 			App_OnChar(ch);
 		} else if(app_state == CS_SAVING) {
 			App_OnCharSave(ch);
@@ -554,7 +578,8 @@ App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
 	anim_del->on_end = OnEnd;
 	anim_del->called_end = 0;
 	
-	Disp_AnimationDel(anim_del);
+	Scroll_AnimationDel(&open_scroll, anim_del);
+	Scroll_AnimationDel(&text_scroll, anim_del);
 	
 	puts("Animation delegates set.");
 }
