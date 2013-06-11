@@ -288,7 +288,7 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 			int line_height = 40;
 			int sel_box_x1 = disp_x - 30;
 			int sel_box_x2 = sel_box_x1 + 20;
-			int sel_box_y1 = 143 + -scroll->amt*line_height;
+			int sel_box_y1 = 143 + scroll->amt*line_height;
 			int sel_box_y2 = sel_box_y1 + 15;
 
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {

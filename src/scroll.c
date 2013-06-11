@@ -34,9 +34,8 @@ Scroll_AnimEnd(scrolling_t * scroll)
 	}
 }
 
-void
-Scroll_Update(scrolling_t * scroll)
-{	
+void Scroll_TextScroll(scrolling_t * scroll)
+{
 	if((scroll->step < NUM_STEPS || scroll->requested)) {
 		float amt = (scroll->dir == SCROLL_UP) ? STEP_AMT : -STEP_AMT;
 		
@@ -59,6 +58,36 @@ Scroll_Update(scrolling_t * scroll)
 		
 		Scroll_AnimEnd(scroll);
 	}
+}
+
+void Scroll_OpenScroll(scrolling_t * scroll)
+{
+	scroll->limit = 10;
+	
+	if((scroll->step < NUM_STEPS || scroll->requested)) {
+		float amt = (scroll->dir == SCROLL_UP) ? -STEP_AMT : STEP_AMT;
+		
+		scroll->amt += 4*amt;
+		
+		if(scroll->amt < 0) {
+			scroll->amt = 0;
+		} else if(scroll->amt > scroll->limit) {
+			scroll->amt = scroll->limit;
+		}
+		scroll->moving = 1;
+		++scroll->step;
+	} else {
+		scroll->moving = 0;
+		scroll->step = 0;
+		
+		Scroll_AnimEnd(scroll);
+	}
+}
+
+void
+Scroll_Update(scrolling_t * scroll)
+{
+	scroll->update(scroll);
 }
 
 void

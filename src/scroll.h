@@ -6,6 +6,9 @@
 
 typedef void (*anim_del_func_t)(void);
 
+struct scrolling_tag;
+typedef void (*scroll_func_t)(struct scrolling_tag *);
+
 typedef struct {
 	anim_del_func_t on_start;
 	int called_start;
@@ -18,7 +21,7 @@ typedef enum {
 	SCROLL_DOWN
 } scrolling_dir_t;
 
-typedef struct {
+typedef struct scrolling_tag {
 	int requested;
 	unsigned int step;
 	int moving;
@@ -26,7 +29,14 @@ typedef struct {
 	double limit;
 	scrolling_dir_t dir;
 	anim_del_t * anim_del;
+	scroll_func_t update; 
 } scrolling_t;
+
+void
+Scroll_TextScroll(scrolling_t * scroll);
+
+void
+Scroll_OpenScroll(scrolling_t * scroll);
 
 void
 Scroll_Update(scrolling_t * scroll);

@@ -48,7 +48,7 @@ static BOOL runLoop = FALSE;
 
 @implementation SysView
 
-static const int FPS = 25;
+#define FPS 25
 static const int SKIP_TICKS = (10000 / FPS);
 
 int

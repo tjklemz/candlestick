@@ -27,6 +27,7 @@
 #include "frame.h"
 #include "utf.h"
 #include "list.h"
+#include "scroll.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,6 +91,8 @@ App_OnInit()
 	//c.f. main.c on the linux fullscreen issue that caused this mess.
 	if(!frm) {
 		frm = Frame_Init();
+		text_scroll.update = Scroll_TextScroll;
+		open_scroll.update = Scroll_OpenScroll;
 	} else {
 		Disp_Destroy();
 		text_scroll.requested = 0;
@@ -167,9 +170,7 @@ void
 App_OnUpdate()
 {
 	if(cur_scroll) {
-		if(cur_scroll->moving || cur_scroll->requested) {
-			Scroll_Update(cur_scroll);
-		}
+		Scroll_Update(cur_scroll);
 	}
 }
 
