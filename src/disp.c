@@ -258,11 +258,9 @@ void
 Disp_OpenScreen(Node * files, scrolling_t * scroll)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
-	float disp_y = disp_h / 2;
+	//float disp_y = disp_h / 2;
 	Node * cur;
 	int line;
-	
-	scroll->limit = 10;
 	
 	glPushMatrix();
 		glLoadIdentity();
@@ -280,9 +278,10 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		//print header
 		Fnt_Print(fnt_reg, "Open", disp_x, 110, 0);
 
+		TEXT_COLOR
+
 		//print files
 		if(!files) {
-			TEXT_COLOR
 			Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
 		} else {
 			int line_height = 40;
@@ -292,18 +291,17 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 			int sel_box_y2 = sel_box_y1 + 15;
 
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
-				DRAWING_COLOR
-				
-				glBegin(GL_QUADS);
-					glVertex2f(sel_box_x1, sel_box_y1);
-					glVertex2f(sel_box_x1, sel_box_y2);
-					glVertex2f(sel_box_x2, sel_box_y2);
-					glVertex2f(sel_box_x2, sel_box_y1);
-				glEnd();
-				
-				TEXT_COLOR
 				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
 			}
+			
+			DRAWING_COLOR
+			
+			glBegin(GL_QUADS);
+				glVertex2f(sel_box_x1, sel_box_y1);
+				glVertex2f(sel_box_x1, sel_box_y2);
+				glVertex2f(sel_box_x2, sel_box_y2);
+				glVertex2f(sel_box_x2, sel_box_y1);
+			glEnd();
 		}
 		
 		PopScreenCoordMat();

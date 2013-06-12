@@ -395,10 +395,11 @@ App_SaveAs()
 //only allows ".txt" extensions at the moment
 
 static
-void
+int
 App_PopulateFiles()
 {
 	Node * cur = 0;
+	int num_files = 0;
 	
 	App_DestroyFilesList();
 	
@@ -438,6 +439,7 @@ App_PopulateFiles()
 							//update the tail pointer
 							cur = cur->next;
 						}
+						++num_files;
 					}
 				}
 			}
@@ -471,12 +473,15 @@ App_PopulateFiles()
 					//update the tail pointer
 					cur = cur->next;
 				}
+				++num_files;
 			} while(_findnext(hFile, &file_d) == 0);
 		}
 
 		_findclose(hFile);
 	}
 #endif
+	
+	return num_files;
 }
 
 static
@@ -526,9 +531,9 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			puts("open command combo...");
 			if(app_state == CS_TYPING) {
 				app_state = CS_OPENING;
+				Scroll_Reset(&open_scroll);
+				open_scroll.limit = (double)(App_PopulateFiles() - 1);
 				cur_scroll = &open_scroll;
-				Scroll_Reset(cur_scroll);
-				App_PopulateFiles();
 			}
 			break;
 		case 'q':
