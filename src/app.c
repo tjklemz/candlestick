@@ -34,6 +34,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <math.h>
 
 #if defined(__unix__) || defined(__APPLE__)
 #  include <dirent.h>
@@ -166,6 +167,16 @@ App_OnRender()
 	}
 }
 
+/**************************************************************************
+ * OnUpdate
+ *
+ * This is called by another thread.
+ *
+ * Be careful what happens inside this function as it is not thread safe.
+ * Updating the scroll var (cur_scroll) should be fine as nothing else
+ * currently updates it (only reads from it).
+ **************************************************************************/
+
 void
 App_OnUpdate()
 {
@@ -257,7 +268,7 @@ App_OnChar(char * ch)
  * File management
  **************************************************************************/
 
-/*static
+static
 void
 App_Read(FILE * file)
 {
@@ -314,26 +325,80 @@ App_Read(FILE * file)
 	}
 	
 	free(buffer);
-}*/
+}
 
-/*static
+/**************************************************************************
+ * CreateFullFilename
+ *
+ * Will return a newly allocated full_filename that has everything
+ * needed to save or open (i.e. actual file access).
+ *
+ * Expects the current "filename" to be valid (and have an extension
+ * if there is one).
+ **************************************************************************/
+
+static
+char *
+App_CreateFullFilename(char * filename)
+{
+	int filename_size;
+	char * full_filename;
+
+	filename_size = strlen(DOCS_FOLDER) + strlen(filename) + 1;
+	full_filename = (char*)malloc(filename_size * sizeof(char));
+	
+	strcpy(full_filename, DOCS_FOLDER);
+	strcat(full_filename, filename);
+	
+	return full_filename;
+}
+
+/**************************************************************************
+ * SaveFilename
+ *
+ * Expects the filename as "name.txt" (or whatever),
+ * but nothing else (no DOCS_FOLDER or file path or anything like that)
+ **************************************************************************/
+
+static
 void
-App_Open(const char * the_filename)
+App_SaveFilename(char * the_filename)
+{
+	Line_Destroy(filename);
+	filename = Line_Init(strlen(the_filename) + 1);
+	Line_InsertStr(filename, the_filename);
+}
+
+static
+void
+App_Open(char * the_filename)
 {
 	FILE * file;
+	char * full_filename;
 	
-	printf("Opening file: %s\n", the_filename);
-	file = fopen(the_filename, "r");
+	full_filename = App_CreateFullFilename(the_filename);
 	
-	App_Read(file);
+	printf("Opening file: %s\n", full_filename);
+	file = fopen(full_filename, "r");
 	
-	fclose(file);
-	printf("...Done.\n");
+	if(!file) {
+		fprintf(stderr, "Could not open requested file!\n");
+		// do nothing... (we'll take the Mac approach for now)
+	} else {
+		App_Read(file);
+
+		fclose(file);
+		printf("...Done.\n");
+
+		App_SaveFilename(the_filename);
+
+		Scroll_Reset(&text_scroll);
+		cur_scroll = &text_scroll;
+		app_state = CS_TYPING;
+	}
 	
-	App_SaveFilename(the_filename);
-	
-	Disp_ScrollReset();
-}*/
+	free(full_filename);
+}
 
 static
 void
@@ -359,16 +424,11 @@ void
 App_Save()
 {
 	FILE * file;
-	int filename_size;
-	char * full_filename;
-
-	filename_size = strlen(DOCS_FOLDER) + strlen(Line_Text(filename)) + 1;
-	full_filename = (char*)malloc(filename_size * sizeof(char));
+	
+	char * the_filename = Line_Text(filename);
+	char * full_filename = App_CreateFullFilename(the_filename);
 	
 	App_CheckDocsFolder();
-	
-	strcpy(full_filename, DOCS_FOLDER);
-	strcat(full_filename, Line_Text(filename));
 	
 	printf("Saving to file: %s\n", full_filename);
 	file = fopen(full_filename, "w");
@@ -392,7 +452,14 @@ App_SaveAs()
 	App_Save();
 }
 
-//only allows ".txt" extensions at the moment
+/**************************************************************************
+ * PopulateFiles
+ *
+ * This only allows ".txt" extensions at the moment.
+ * Creates the list of filenames (just the names, with extensions).
+ *
+ * Returns the number of files that are now in the list.
+ **************************************************************************/
 
 static
 int
@@ -422,7 +489,8 @@ App_PopulateFiles()
 			//only do something if the thing is an actual file and is .txt
 			if(stat(filename_full, &st) != -1) {
 				if(S_ISREG(st.st_mode & S_IFMT)) {
-					if(strstr(dp->d_name, ".txt")) {
+					int len = strlen(dp->d_name);
+					if(len > 4 && !strcmp(&dp->d_name[len - 4], ".txt")) {
 						//alloc storage for the filename
 						Node * file = Node_Init();
 						char * filename = malloc(file_len + 1);
@@ -516,6 +584,38 @@ App_OnCharSave(char * ch)
 	}
 }
 
+static
+void
+App_OnCharOpen(char * ch)
+{
+	switch(*ch) {
+	case '\n':
+	case '\r':
+	{
+		Node * cur;
+		int i;
+		double amt = open_scroll.amt;
+		int file_num = (int)(open_scroll.dir == SCROLL_UP ? ceil(amt) : floor(amt));
+		
+		for(cur = files, i = 0; cur && i != file_num; cur = cur->next, ++i) {
+			//just chill
+		}
+		
+		if(cur) {
+			App_Open((char*)cur->data);
+		} else {
+			// this should never happen so long as the scrolling logic stays withing
+			// the scrolling bounds (i.e. scroll->limit remains valid)
+			fprintf(stderr, "Requested open index is bad!");
+			// just do nothing...
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
+
 void
 App_OnKeyDown(char * ch, cs_key_mod_t mods)
 {	
@@ -564,6 +664,8 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			App_OnChar(ch);
 		} else if(app_state == CS_SAVING) {
 			App_OnCharSave(ch);
+		} else if(app_state == CS_OPENING) {
+			App_OnCharOpen(ch);
 		}
 	}
 }

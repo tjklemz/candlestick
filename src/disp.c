@@ -277,6 +277,8 @@ void
 Disp_OpenScreen(Node * files, scrolling_t * scroll)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
+	int line_height = 40;
+	int num_lines = (int)ceil(disp_h / line_height) - 6;
 	//float disp_y = disp_h / 2;
 	Node * cur;
 	int line;
@@ -296,6 +298,10 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		
 		//print header
 		Fnt_Print(fnt_reg, "Open", disp_x, 110, 0);
+		
+		if((int)ceil(scroll->amt) > num_lines) {
+			glTranslatef(0.0f, -(int)ceil((scroll->amt - num_lines)*line_height), 0.0f);
+		}
 
 		TEXT_COLOR
 
@@ -303,8 +309,6 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		if(!files) {
 			Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
 		} else {
-			int line_height = 40;
-
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
 				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
 			}

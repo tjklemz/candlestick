@@ -73,7 +73,9 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 		//double max_amt = abs(amt)*pow((double)(NUM_STEPS - 1) >> 3), 2.125);
 		double old_amt = scroll->amt;
 		
-		scroll->amt += (1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 300.0, 3.0);
+		//scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
+		//scroll->amt += (1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 300.0, 3.0);
+		scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
 		
 		//default to false
 		scroll->moving = 0;
