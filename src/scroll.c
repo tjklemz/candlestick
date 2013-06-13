@@ -66,12 +66,14 @@ void Scroll_TextScroll(scrolling_t * scroll)
 
 void Scroll_OpenScroll(scrolling_t * scroll)
 {
+	static int num_scrolls = 0;
+	
 	if((scroll->moving || scroll->requested)) {
 		float amt = (scroll->dir == SCROLL_UP) ? -STEP_AMT : STEP_AMT;
 		//double max_amt = abs(amt)*pow((double)(NUM_STEPS - 1) >> 3), 2.125);
 		double old_amt = scroll->amt;
 		
-		scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
+		scroll->amt += (1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 300.0, 3.0);
 		
 		//default to false
 		scroll->moving = 0;
@@ -90,6 +92,7 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 				//printf("old_amt: %d new_amt: %d\n", (int)old_amt, (int)scroll->amt);
 				//scroll->amt = trunc(scroll->amt);
 				scroll->step = 0;
+				++num_scrolls;
 			} else {
 				// not done, so keep moving
 				scroll->moving = 1;
@@ -99,6 +102,7 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 	} else {
 		scroll->moving = 0;
 		scroll->step = 0;
+		num_scrolls = 0;
 		
 		Scroll_AnimEnd(scroll);
 	}

@@ -254,6 +254,25 @@ Disp_SaveScreen(char * filename)
 	glPopMatrix();
 }
 
+static
+void
+Disp_DrawOpenCursor(int x, int y)
+{
+	int x1 = x;
+	int x2 = x1 + 15;
+	int y1 = y;
+	int y2 = y1 + 24;
+	
+	glBegin(GL_POLYGON);
+		glVertex2f(x1, y1);
+		glVertex2f(x1, y2);
+		glVertex2f(x2, y2);
+		glVertex2f(x2 + 11, y1 + 24.0/2.0);
+		glVertex2f(x2, y1);
+		glVertex2f(x1, y1);
+	glEnd();
+}
+
 void
 Disp_OpenScreen(Node * files, scrolling_t * scroll)
 {
@@ -285,10 +304,6 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 			Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
 		} else {
 			int line_height = 40;
-			int sel_box_x1 = disp_x - 30;
-			int sel_box_x2 = sel_box_x1 + 20;
-			int sel_box_y1 = 143 + scroll->amt*line_height;
-			int sel_box_y2 = sel_box_y1 + 15;
 
 			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
 				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
@@ -296,12 +311,7 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 			
 			DRAWING_COLOR
 			
-			glBegin(GL_QUADS);
-				glVertex2f(sel_box_x1, sel_box_y1);
-				glVertex2f(sel_box_x1, sel_box_y2);
-				glVertex2f(sel_box_x2, sel_box_y2);
-				glVertex2f(sel_box_x2, sel_box_y1);
-			glEnd();
+			Disp_DrawOpenCursor(disp_x - 32, 138 + scroll->amt*line_height);
 		}
 		
 		PopScreenCoordMat();
