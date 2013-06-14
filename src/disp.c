@@ -81,7 +81,7 @@ Disp_TypingScreen(Frame * frm, scrolling_t * scroll)
 {	
 	//window coords for start of frame
 	float fnt_width = Fnt_Width(fnt_reg);
-	float line_height = Fnt_LineHeight(fnt_reg) * 1.5 * fnt_width;
+	float line_height = Fnt_LineHeight(fnt_reg) * 1.545 * fnt_width;
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_width)) / 2);
 	//printf("disp_x: %f, disp_w: %d, fnt_width: %f\n", disp_x, disp_w, fnt_width);
 	float disp_y = disp_h / 2;

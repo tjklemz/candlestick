@@ -405,7 +405,7 @@ InitialWindowSize()
 		backing: NSBackingStoreBuffered
 		defer: YES
 		screen: [NSScreen mainScreen]];
-	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, 100)];
+	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT / 2)];
 	[window setTitle: [NSString stringWithUTF8String:APP_NAME]]; //[[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];
@@ -451,7 +451,9 @@ InitialWindowSize()
 		isfullscreen = 0;
 		
 		frame = InitialWindowSize();
-	    [window setFrame:frame display:NO animate:NO];
+	    //[window setFrame:frame display:NO animate:NO];
+		[window setFrameOrigin:frame.origin];
+		[window setContentSize:frame.size];
 		
 		[self bringTextToFocus];
 	} else {

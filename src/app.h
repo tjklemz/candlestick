@@ -24,8 +24,8 @@
 #define APP_NAME "Candlestick"
 
 //Golden Rectangle
-#define WIN_INIT_WIDTH  850 * 1.2
-#define WIN_INIT_HEIGHT 525 * 1.2
+#define WIN_INIT_WIDTH  (850 * 1.2)
+#define WIN_INIT_HEIGHT (525 * 1.2)
 
 #define FONT_SIZE 24
 

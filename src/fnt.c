@@ -516,7 +516,7 @@ Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cur
 	Line * cur_line;
 	int line = 0;
 	float cursor_x = 0;
-	float h = fnt->line_height * 1.5 * fnt->w;
+	float h = fnt->line_height * 1.545 * fnt->w;
 	FT_Face f = fnt->face;
 	float s = fnt->size;
 	
