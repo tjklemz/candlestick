@@ -21,6 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "opengl.h"
 #include "app.h"
@@ -28,6 +31,9 @@
 #include "keysym2ucs.h"
 
 #include <X11/Xatom.h>
+
+#define FPS 25
+static const int SKIP_TICKS = (10000 / FPS);
 
 static Display * dpy;
 static Window root;
@@ -43,6 +49,100 @@ static int quit = 0;
 static int fullscreen = 0;
 static Atom wmDeleteMessage;
 
+static pthread_t loop_thread;
+static int runLoop = 0;
+
+int
+timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
+{
+	/* Perform the carry for the later subtraction by updating y. */
+       if (x->tv_usec < y->tv_usec) {
+         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+         y->tv_usec -= 1000000 * nsec;
+         y->tv_sec += nsec;
+       }
+       if (x->tv_usec - y->tv_usec > 1000000) {
+         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+         y->tv_usec += 1000000 * nsec;
+         y->tv_sec -= nsec;
+       }
+     
+       /* Compute the time remaining to wait.
+          tv_usec is certainly positive. */
+       result->tv_sec = x->tv_sec - y->tv_sec;
+       result->tv_usec = x->tv_usec - y->tv_usec;
+     
+       /* Return 1 if result is negative. */
+       return x->tv_sec < y->tv_sec;
+}
+
+static
+void *
+loop(void * q)
+{
+	//XEvent exp;
+	//Display * d;
+	
+	struct timeval then;
+	struct timeval now;
+	struct timeval diff;
+	double sleep_time = 0.0;
+	
+	gettimeofday(&then, NULL);
+	
+	//d = XOpenDisplay(NULL);
+	//puts("begin looping");
+	
+	while(runLoop)
+	{	
+        App_OnUpdate();
+		
+		// sends Expose event (to redraw)
+		//XLockDisplay(dpy);
+		//XClearArea(d, win, 0, 0, 0, 0, True);
+		//XFlush(d);
+		//XUnlockDisplay(dpy);
+		
+		//XLockDisplay(dpy);
+		//memset(&exp, 0, sizeof(exp));
+		//exp.type = Expose;
+		//exp.xexpose.window = win;
+		//XSendEvent(d, win, False, ExposureMask, &exp);
+		//XFlush(d);
+		//XUnlockDisplay(dpy);
+		
+		then.tv_usec += SKIP_TICKS;
+		gettimeofday(&now, NULL);
+		
+		if(!timeval_subtract(&diff, &then, &now)) {
+			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
+			usleep(sleep_time);
+		}
+	}
+	//puts("done with loop");
+	//XFlush(d);
+	//XCloseDisplay(d);
+	//pthread_exit(0);
+	
+	return NULL;
+}
+
+static
+void
+startLoop()
+{
+	runLoop = 1;
+	pthread_create(&loop_thread, NULL, loop, NULL);
+}
+
+static
+void
+stopLoop()
+{
+	runLoop = 0;
+	//puts("loop should stop now");
+}
+
 static
 void
 EnableOpenGL()
@@ -55,6 +155,7 @@ static
 void
 DestroyWindow()
 {
+	stopLoop();
 	glXMakeCurrent(dpy, None, NULL);
 	glXDestroyContext(dpy, glc);
 	XDestroyWindow(dpy, xev.xclient.window);
@@ -83,7 +184,7 @@ CreateWindow()
 	dpy = XOpenDisplay(NULL);
 
 	if(dpy == NULL) {
-		printf("\n\tcannot connect to X server\n\n");
+		puts("\n\tcannot connect to X server\n");
 		exit(0);
 	}
 
@@ -91,7 +192,7 @@ CreateWindow()
 	vi = glXChooseVisual(dpy, 0, att);
 
 	if(vi == NULL) {
-		printf("\n\tno appropriate visual found\n\n");
+		puts("\n\tno appropriate visual found\n");
 		exit(0);
 	} 
 
@@ -167,7 +268,7 @@ ToggleFullscreen()
 void
 OnQuitRequest()
 {
-	printf("Quit requested...\n");
+	puts("Quit requested...");
 	quit = 1;
 }
 
@@ -178,9 +279,12 @@ int main(int argc, char *argv[])
 	int ucs;
 	cs_key_mod_t mods = CS_NONE;
 	
+	XInitThreads();
+	
 	CreateWindow();
 	
 	App_OnInit();
+	App_AnimationDel(startLoop, stopLoop);
 	App_FullscreenDel(ToggleFullscreen);
 	App_QuitRequestDel(OnQuitRequest);
 
@@ -191,11 +295,18 @@ int main(int argc, char *argv[])
 			//have to manually handle the window close message
 			if (xev.type == ClientMessage &&
 				xev.xclient.data.l[0] == wmDeleteMessage) {
-				printf("Quitting...\n");
+				puts("Quitting...");
 				quit = 1;
 			} else if(xev.type == Expose) {
+				XWindowAttributes old_gwa = gwa;
 				XGetWindowAttributes(dpy, win, &gwa);
-				App_OnResize(gwa.width, gwa.height);
+				
+				//check for resize
+				if(old_gwa.width != gwa.width || old_gwa.height != gwa.height) {
+					App_OnResize(gwa.width, gwa.height);
+				}
+				
+				//puts("ready for redraw (exposed)");
 			} else if(xev.type == KeyPress) {
 				//pass in shifted so that it returns uppercase/lowercase
 				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
@@ -257,7 +368,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		App_OnUpdate();
+		
 		App_OnRender();
 		glXSwapBuffers(dpy, win);
 	}

@@ -83,7 +83,7 @@ else ifeq ($(PLAT),mac)
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
 	MAIN_SRC = main-mac.m
 else ifeq ($(PLAT),nix)
-	OS_LIBS = -lX11
+	OS_LIBS = -lX11 -lpthread
 	GL_LIBS = -lGL -lGLU
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
 	MAIN_SRC = main-nix.c

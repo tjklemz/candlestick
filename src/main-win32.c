@@ -37,20 +37,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 #define FPS 25
 static const int SKIP_TICKS = (10000 / FPS);
 
-/*inline void render()
-{
-	if(!rendering) {
-		if(!rendering) {
-			rendering = TRUE;
-			App_OnRender();
-			SwapBuffers(hDC);
-			rendering = FALSE;
-		}
-	}
-    //glFinish();
-    //swap buffers
-}*/
-
 void uSleep(int waitTime)
 {
 	__int64 time1 = 0, time2 = 0, freq = 0;
@@ -70,11 +56,10 @@ static DWORD WINAPI loop(LPVOID param)
 	int sleep_time = 0;
 
 	while(runLoop) {
-		//static int i = 0;
-		//printf("%d yup", ++i);
 		App_OnUpdate();
-		//render();
+		
 		InvalidateRect(hWnd, NULL, FALSE);
+		
 		next_game_tick += SKIP_TICKS;
 		sleep_time = next_game_tick - GetTickCount();
 
