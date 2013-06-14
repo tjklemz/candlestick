@@ -27,6 +27,7 @@ endif
 
 ifeq ($(OS),Windows_NT)
 	PLAT = win32
+	BINARY = $(APPNAME).exe
 else
 	UNAME = $(shell uname)
 	PLAT = nix
@@ -36,27 +37,35 @@ else
 	endif
 endif
 
+ifeq ($(PLAT),win32)
+	CC += -m32
+	ARCH = x86
+else
+	ARCH = x$(shell getconf LONG_BIT)
+endif	
+
 SRCDIR = src
-LIBDIR = lib/$(PLAT)
+LIBDIR = lib/$(PLAT)/$(ARCH)
 RESDIR = res
 OUTDIR = package
 APPDIR = $(APPNAME)app
-MACAPP = $(BINARY).app
+MACAPP = $(APPNAME).app
 FONTDIR = $(RESDIR)/common/font
 
 # It's better to list out the source files than glob them.
 # This way, there can be other WIP files in the directory w/o issue,
 # and there's no unnecessary compiling.
-COMMON_SRC = \
+SRC = \
   app.c \
   disp.c \
   fnt.c \
+  line.c \
   frame.c \
   list.c \
   utils.c \
   utf8.c \
   rune.c \
-  keysym2ucs.c \
+  scroll.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2
@@ -64,7 +73,7 @@ FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2
 COMMON_LIBS = -lm
 
 ifeq ($(PLAT),win32)
-	OS_LIBS = -luser32 -lgdi32
+	OS_LIBS = -luser32 -lgdi32 -lkernel32
 	GL_LIBS = -lopengl32 -lglu32
 	FT_LIBS = $(LIBDIR)/freetype.lib
 	MAIN_SRC = main-win32.c
@@ -74,13 +83,14 @@ else ifeq ($(PLAT),mac)
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
 	MAIN_SRC = main-mac.m
 else ifeq ($(PLAT),nix)
-	OS_LIBS = -lX11
+	OS_LIBS = -lX11 -lpthread
 	GL_LIBS = -lGL -lGLU
-	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a
+	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
 	MAIN_SRC = main-nix.c
+	SRC += keysym2ucs.c
 endif
 
-SOURCE = $(addprefix $(SRCDIR)/, $(COMMON_SRC) $(MAIN_SRC))
+SOURCE = $(addprefix $(SRCDIR)/, $(SRC) $(MAIN_SRC))
 LDFLAGS = $(COMMON_LIBS) $(OS_LIBS) $(GL_LIBS) $(FT_LIBS)
 CFLAGS = $(FREETYPE_INC)
 
@@ -93,9 +103,12 @@ CFLAGS = $(FREETYPE_INC)
 all: $(BINARY)
 
 $(BINARY): $(SOURCE)
-	@echo "\nCompiling sources in '$(SRCDIR)'...\n"
+	@echo
+	@echo "Compiling sources in '$(SRCDIR)'..."
+	@echo
 	$(CC) $(SOURCE) -o $(BINARY) $(CFLAGS) $(LDFLAGS)
-	@echo "\n...Done building."
+	@echo
+	@echo "...Done building."
 
 
 ######################################################################
@@ -108,7 +121,8 @@ package-mac: package-common $(RESDIR)/mac/*
 	@cp -a $(BINARY) $(OUTDIR)/$(APPDIR)/$(MACAPP)/Contents/MacOS
 	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)/$(MACAPP)/Contents/MacOS
 	@cd $(OUTDIR) && tar -cjf $(ARCHIVE) $(APPDIR)
-	@echo "Packaged $(APPNAME) into $(APPDIR)/$(MACAPP)\n"
+	@echo "Packaged $(APPNAME) into $(APPDIR)/$(MACAPP)"
+	@echo
 	@echo "Archived into $(OUTDIR)/$(ARCHIVE)"
 
 .PHONY: package-nix
@@ -117,14 +131,23 @@ package-nix: package-common $(RESDIR)/nix/*
 	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)
 	@echo "Packaged $(APPNAME) into $(APPDIR)."
 
+.PHONY: package-win32
+package-win32: package-common $(RESDIR)/win32/*
+	@cp -a $(BINARY) $(OUTDIR)/$(APPDIR)
+	@cp -Ra $(FONTDIR) $(OUTDIR)/$(APPDIR)
+	@echo "Packaged $(APPNAME) into $(APPDIR)."
+
 .PHONY: package-common
 package-common: $(BINARY) $(RESDIR)/common/*
-	@echo "\nPackaging $(APPNAME)..."
+	@echo
+	@echo "Packaging $(APPNAME)..."
 	@mkdir -p $(OUTDIR)/$(APPDIR)
 
 .PHONY: package
 package: package-$(PLAT)
-	@echo "\nDone packaging. See the $(APPDIR) folder.\n"
+	@echo
+	@echo "Done packaging. See the $(APPDIR) folder."
+	@echo
 
 
 ######################################################################
@@ -137,6 +160,10 @@ run-mac: package
 	
 .PHONY: run-nix
 run-nix: package
+	@cd $(OUTDIR)/$(APPDIR) && ./$(BINARY)
+
+.PHONY: run-win32
+run-win32: package
 	@cd $(OUTDIR)/$(APPDIR) && ./$(BINARY)
 
 .PHONY: run

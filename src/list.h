@@ -18,9 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  **************************************************************************/
 
-typedef struct node_type {
-	struct node_type * next;
-	struct node_type * prev;
+#ifndef NODE_H
+#define NODE_H
+
+typedef struct node_t {
+	struct node_t * next;
+	struct node_t * prev;
 	void * data;
 } Node;
 
@@ -35,3 +38,5 @@ Node_Append(Node * pointer, Node * new_node);
 
 void
 Node_Delete(Node * pointer);
+
+#endif

@@ -38,16 +38,18 @@ Node_Init()
 void
 Node_Destroy(Node * head)
 {
-	Node * temp = head;
-	
-	while(temp->next) {
-		head = head->next;
+	if(head) {
+		Node * temp = head;
+		
+		while(temp->next) {
+			head = head->next;
+			free(temp);
+			temp = head;
+		}
+		
 		free(temp);
-		temp = head;
+		temp = NULL;
 	}
-	
-	free(temp);
-	temp = NULL;
 }
 
 void

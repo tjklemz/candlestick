@@ -43,6 +43,7 @@
 #include <math.h>
 
 #include "fnt.h"
+#include "line.h"
 #include "opengl.h"
 #include "utf.h"
 #include "utils.h"
@@ -370,15 +371,6 @@ static float draw_string(FT_Face face, float fsize, float x, float y, char *str)
 }
 
 /**********************************************************************
- * return the font size in points
- **********************************************************************/
-float
-Fnt_Size(Fnt * fnt)
-{
-	return fnt->size;
-}
-
-/**********************************************************************
  * return the font character width
  **********************************************************************/
 static
@@ -408,6 +400,22 @@ Fnt_Width(Fnt * fnt)
 }
 
 /**********************************************************************
+ * return the font size in points
+ **********************************************************************/
+float
+Fnt_Size(Fnt * fnt)
+{
+	return fnt->size;
+}
+
+void
+Fnt_SetSize(Fnt * fnt, float size)
+{
+	fnt->size = size;
+	Fnt_CalcWidth(fnt);
+}
+
+/**********************************************************************
  * returns the line height
  **********************************************************************/
 float
@@ -420,7 +428,7 @@ Fnt_LineHeight(Fnt * fnt)
  * creates a fnt with a given name and height (in points)
  **********************************************************************/
 Fnt*
-Fnt_Init(const char * fname, unsigned int size, float line_height)
+Fnt_Init(const char * fname, float size, float line_height)
 {
 	Fnt * fnt = (Fnt *)malloc(sizeof(Fnt));
 	
@@ -448,14 +456,67 @@ Fnt_Destroy(Fnt * fnt)
  * prints text at window coords (x,y) using the fnt
  **********************************************************************/
 
-void
-Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
+inline
+static
+int
+Fnt_PrintCursor(Fnt * fnt, int x, int y)
+{
+	glPushMatrix();
+		
+	glBegin(GL_LINES);
+		glVertex2f(x, (float)y);
+		glVertex2f(x + fnt->w, (float)y);
+	glEnd();
+	
+	glPopMatrix();
+	
+	return x + fnt->w;
+}
+
+float
+Fnt_Print(Fnt * fnt, char * str, int x, int y, int show_cursor)
+{
+	float modelview_matrix[16];
+	float amt;
+	
+	PushScreenCoordMat();
+	
+	glPushAttrib(GL_LIST_BIT | GL_CURRENT_BIT  | GL_ENABLE_BIT | GL_TRANSFORM_BIT);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glDisable(GL_LIGHTING);
+	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
+	
+	glPushMatrix();
+	
+	amt = draw_string(fnt->face, fnt->size, (float)x, (float)y, str);
+	
+	glPopMatrix();
+	glPopAttrib();
+	
+	if(show_cursor) {
+		amt = Fnt_PrintCursor(fnt, amt, y);
+	}
+	
+	PopScreenCoordMat();
+	
+	return amt;
+}
+
+float
+Fnt_PrintFrame(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 {
 	float modelview_matrix[16];
 	
 	Line * cur_line;
 	int line = 0;
-	float h = fnt->line_height * 1.5 * fnt->w;
+	float cursor_x = 0;
+	float h = fnt->line_height * 1.55 * fnt->w;
 	FT_Face f = fnt->face;
 	float s = fnt->size;
 	
@@ -471,13 +532,19 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	
 
-	//glListBase(flist);
-
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelview_matrix);
 	
 	glPushMatrix();
 	
 	Frame_IterEnd(frm);
+	
+	//Unroll one loop iteration so we can get the cursor_x position.
+	//Don't draw it yet because of the current stack (attributes).
+	if(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
+		cursor_x = draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line));
+		++line;
+	}
+	
 	while(line < max_lines && (cur_line = Frame_IterPrev(frm))) {
 		draw_string(f, s, (float)x, (float)y - h*line, Line_Text(cur_line));
 		++line;
@@ -487,6 +554,13 @@ Fnt_Print(Fnt * fnt, Frame * frm, int x, int y, int max_lines, int show_cursor)
 	
 	glPopAttrib();
 	
+	//Now draw the cursor (correct gl stack attributes)
+	if(show_cursor) {
+		cursor_x = Fnt_PrintCursor(fnt, cursor_x, y);
+	}
+	
 	//go back to world coords
 	PopScreenCoordMat();
+	
+	return cursor_x;
 }

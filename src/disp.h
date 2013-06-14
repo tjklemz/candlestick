@@ -22,15 +22,8 @@
 #define DISPLAY_H
 
 #include "frame.h"
-
-typedef void (*anim_del_func_t)(void);
-
-typedef struct {
-	anim_del_func_t on_start;
-	int called_start;
-	anim_del_func_t on_end;
-	int called_end;
-} anim_del_t;
+#include "list.h"
+#include "scroll.h"
 
 void
 Disp_Init(int fnt_size);
@@ -39,24 +32,18 @@ void
 Disp_Destroy();
 
 void
-Disp_Render(Frame * frm);
+Disp_BeginRender();
+
+void
+Disp_TypingScreen(Frame * frm, scrolling_t * scroll);
+
+void
+Disp_SaveScreen(char * filename);
+
+void
+Disp_OpenScreen(Node * files, scrolling_t * scroll);
 
 void
 Disp_Resize(int w, int h);
-
-void
-Disp_AnimationDel(anim_del_t * anim_del);
-
-void
-Disp_ScrollUpRequested();
-
-void
-Disp_ScrollDownRequested();
-
-void
-Disp_ScrollStopRequested();
-
-void
-Disp_ScrollReset();
 
 #endif

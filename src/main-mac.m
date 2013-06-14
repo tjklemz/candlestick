@@ -23,6 +23,8 @@
 #include "opengl.h"
 #include "app.h"
 
+#include <sys/time.h>
+
 @interface SysView : NSOpenGLView
 {
 }
@@ -41,37 +43,76 @@
 static int isfullscreen = 0;
 static NSWindow *window;
 static SysView *view;
-static BOOL hasBeenSaved = NO;
-static NSTimer * renderTimer;
+//static BOOL hasBeenSaved = NO;
+static BOOL runLoop = FALSE;
 
 @implementation SysView
- 
-// Timer callback method
-- (void)timerFired:(id)sender
+
+#define FPS 25
+static const int SKIP_TICKS = (10000 / FPS);
+
+int
+timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
 {
-    // It is good practice in a Cocoa application to allow the system to send the -drawRect:
-    // message when it needs to draw, and not to invoke it directly from the timer.
-    // All we do here is tell the display it needs a refresh
-    [self setNeedsDisplay:YES];
+	/* Perform the carry for the later subtraction by updating y. */
+       if (x->tv_usec < y->tv_usec) {
+         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+         y->tv_usec -= 1000000 * nsec;
+         y->tv_sec += nsec;
+       }
+       if (x->tv_usec - y->tv_usec > 1000000) {
+         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+         y->tv_usec += 1000000 * nsec;
+         y->tv_sec -= nsec;
+       }
+     
+       /* Compute the time remaining to wait.
+          tv_usec is certainly positive. */
+       result->tv_sec = x->tv_sec - y->tv_sec;
+       result->tv_usec = x->tv_usec - y->tv_usec;
+     
+       /* Return 1 if result is negative. */
+       return x->tv_sec < y->tv_sec;
 }
 
-static void startTimer()
+- (void)loop
 {
-	if(renderTimer == nil) {
-		renderTimer = [[NSTimer scheduledTimerWithTimeInterval:0.001   //in seconds
-	                                                    target:view
-	                                                  selector:@selector(timerFired:)
-	                                                  userInfo:nil
-	                                                   repeats:YES] retain];
+	struct timeval then;
+	struct timeval now;
+	struct timeval diff;
+	double sleep_time = 0.0;
+	
+	gettimeofday(&then, NULL);
+	
+	while(runLoop)
+	{
+		NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+		
+        App_OnUpdate();
+		
+		[view setNeedsDisplay:YES];
+		
+		then.tv_usec += SKIP_TICKS;
+		gettimeofday(&now, NULL);
+		
+		if(!timeval_subtract(&diff, &then, &now)) {
+			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
+			usleep(sleep_time);
+		}
+		
+		[pool release];
 	}
 }
 
-static void stopTimer()
+static void startLoop()
 {
-	if(renderTimer != nil) {
-		[renderTimer invalidate];
-		renderTimer = nil;
-	}
+	runLoop = TRUE;
+	[NSThread detachNewThreadSelector:@selector(loop) toTarget:view withObject:nil];
+}
+
+static void stopLoop()
+{
+	runLoop = FALSE;
 }
 
 - (id)initWithFrame:(NSRect)frameRect
@@ -98,7 +139,7 @@ static void stopTimer()
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 	
 	App_OnInit();
-	App_AnimationDel(&startTimer, &stopTimer);
+	App_AnimationDel(startLoop, stopLoop);
 }
 
 - (void)reshape
@@ -122,102 +163,42 @@ static void stopTimer()
 	return YES;
 }
 
--(void)saveAs:(NSNotification *)notification
-{
-	NSSavePanel *panel = [[NSSavePanel savePanel] retain];
-	[panel setLevel:CGShieldingWindowLevel()];
-	
-	[panel setAllowedFileTypes:[NSArray arrayWithObjects:@"txt", nil]];
-	[panel setCanSelectHiddenExtension:YES];
-	[panel setAllowsOtherFileTypes:YES];
-	[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
-	
-	[panel beginWithCompletionHandler:^(NSInteger returnCode) {
-		if(returnCode == NSFileHandlingPanelOKButton) {
-			const char * filename;
-			[panel orderOut:self];
-			filename = [[[panel URL] path] UTF8String];
-			NSLog(@"Got URL: %s", filename);
-			App_SaveAs(filename);
-			hasBeenSaved = YES;
-		}
-		
-		[panel release];
-	}];
-	
-	[self setNeedsDisplay:YES];
-}
-
--(void)save:(NSNotification *)notification
-{
-	if(!hasBeenSaved) {
-		[self saveAs:notification];
-	} else {
-		App_Save();
-	}
-	
-	[self setNeedsDisplay:YES];
-}
-
--(void)open:(NSNotification *)notification
-{
-	NSOpenPanel *panel = [[NSOpenPanel openPanel] retain];
-	[panel setLevel:CGShieldingWindowLevel()];
-
-	// Configure your panel the way you want it
-	[panel setCanChooseFiles:YES];
-	[panel setCanChooseDirectories:NO];
-	[panel setAllowsMultipleSelection:NO];
-	[panel setAllowedFileTypes:[NSArray arrayWithObject:@"txt"]];
-	[panel setAllowsOtherFileTypes:YES];
-	[panel setDirectoryURL:[NSURL fileURLWithPath:[@"~/Documents" stringByExpandingTildeInPath]]];
-
-	[panel beginWithCompletionHandler:^(NSInteger result){
-	    if (result == NSFileHandlingPanelOKButton) {
-			const char * filename;
-			[panel orderOut:self];
-			filename = [[[panel URL] path] UTF8String];
-			NSLog(@"Got URL: %s", filename);
-			App_Open(filename);
-			[self setNeedsDisplay:YES];
-			hasBeenSaved = YES;
-	    }
-		
-		[[NSApp delegate] bringTextToFocus];
-
-	    [panel release];
-	}];
-}
-
--(void)reload:(NSNotification *)notification
-{
-	if(!hasBeenSaved) {
-		[self open:notification];
-	} else {
-		App_Reload();
-	}
-	
-	[self setNeedsDisplay:YES];
-}
-
 #define UP_ARROW    126
 #define DOWN_ARROW  125
 #define RIGHT_ARROW 124
 #define LEFT_ARROW  123
+#define ESCAPE      53
 
 - (void)keyDown:(NSEvent *)anEvent
 {	
+	cs_key_mod_t mods = CS_NONE;
+	
+	NSUInteger flags = [anEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+	
+	if(flags & NSCommandKeyMask)    mods |= CS_SUPER;
+	if(flags & NSControlKeyMask)    mods |= CS_CONTROL;
+	if(flags & NSAlternateKeyMask)  mods |= CS_ALT;
+	if(flags & NSShiftKeyMask)      mods |= CS_SHIFT;
+	
 	switch([anEvent keyCode]) {
-	case LEFT_ARROW:     App_OnSpecialKeyDown(CS_ARROW_LEFT);     break;
-	case RIGHT_ARROW:    App_OnSpecialKeyDown(CS_ARROW_RIGHT);    break; 
-	case UP_ARROW:       App_OnSpecialKeyDown(CS_ARROW_UP);       break;
-	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN);     break;
+	case LEFT_ARROW:     App_OnSpecialKeyDown(CS_ARROW_LEFT, mods);     break;
+	case RIGHT_ARROW:    App_OnSpecialKeyDown(CS_ARROW_RIGHT, mods);    break; 
+	case UP_ARROW:       App_OnSpecialKeyDown(CS_ARROW_UP, mods);       break;
+	case DOWN_ARROW:     App_OnSpecialKeyDown(CS_ARROW_DOWN, mods);     break;
+	case ESCAPE:         App_OnSpecialKeyDown(CS_ESCAPE, mods);         break;
 	default:
 		{
-			char character[255];
+			char ch[255];
 			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
-			strcpy(character, key);
-			App_OnKeyDown(character);
+			strcpy(ch, key);
+			if(ch[0] == '\r') {
+				//NSLog(@"Converted CR to LF\n");
+				ch[0] = '\n';
+			} else if((int)ch[0] == -17) {
+				//NSLog(@"Converted Mac delete to actual delete\n");
+				ch[0] = 127;
+			}
+			App_OnKeyDown(ch, mods);
 		}
 	    break;
 	}
@@ -227,18 +208,22 @@ static void stopTimer()
 
 - (void)keyUp:(NSEvent *)anEvent
 {
+	cs_key_mod_t mods = CS_NONE;
+	
+	NSUInteger flags = [anEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
+	
+	if(flags & NSCommandKeyMask)    mods |= CS_SUPER;
+	if(flags & NSControlKeyMask)    mods |= CS_CONTROL;
+	if(flags & NSAlternateKeyMask)  mods |= CS_ALT;
+	if(flags & NSShiftKeyMask)      mods |= CS_SHIFT;
+	
 	switch([anEvent keyCode]) {
-	case LEFT_ARROW:     App_OnSpecialKeyUp(CS_ARROW_LEFT);       break;
-	case RIGHT_ARROW:    App_OnSpecialKeyUp(CS_ARROW_RIGHT);      break;
-	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP);         break;
-	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN);       break;
+	case LEFT_ARROW:     App_OnSpecialKeyUp(CS_ARROW_LEFT, mods);       break;
+	case RIGHT_ARROW:    App_OnSpecialKeyUp(CS_ARROW_RIGHT, mods);      break;
+	case UP_ARROW:       App_OnSpecialKeyUp(CS_ARROW_UP, mods);         break;
+	case DOWN_ARROW:     App_OnSpecialKeyUp(CS_ARROW_DOWN, mods);       break;
+	case CS_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE, mods);           break;
 	default:
-		{
-			char character[255];
-			const char * key = [[anEvent charactersIgnoringModifiers] UTF8String];
-			strcpy(character, key);
-			App_OnKeyUp(character);
-		}
 	    break;
 	}
 	
@@ -277,7 +262,7 @@ static void stopTimer()
 
 +(void)populateApplicationMenu:(NSMenu *)aMenu
 {
-	NSString *applicationName = [[NSProcessInfo processInfo] processName];
+	NSString *applicationName = [NSString stringWithUTF8String:APP_NAME]; //[[NSProcessInfo processInfo] processName];
 	NSMenuItem *menuItem;
 
 	menuItem = [aMenu addItemWithTitle:[NSString stringWithFormat:@"%@ %@", NSLocalizedString(@"About", nil), applicationName]
@@ -420,8 +405,8 @@ InitialWindowSize()
 		backing: NSBackingStoreBuffered
 		defer: YES
 		screen: [NSScreen mainScreen]];
-	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, 100)];
-	[window setTitle: [[NSProcessInfo processInfo] processName]];
+	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT / 2)];
+	[window setTitle: [NSString stringWithUTF8String:APP_NAME]]; //[[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];
 
@@ -445,7 +430,7 @@ InitialWindowSize()
 {
 	App_OnDestroy();
 	[window release];
-	stopTimer();
+	stopLoop();
 	
 	NSLog(@"Terminating...");
 }
@@ -466,7 +451,9 @@ InitialWindowSize()
 		isfullscreen = 0;
 		
 		frame = InitialWindowSize();
-	    [window setFrame:frame display:NO animate:NO];
+	    //[window setFrame:frame display:NO animate:NO];
+		[window setFrameOrigin:frame.origin];
+		[window setContentSize:frame.size];
 		
 		[self bringTextToFocus];
 	} else {
