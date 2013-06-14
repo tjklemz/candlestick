@@ -40,6 +40,7 @@ static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 
 #define TEXT_COLOR     glColor3ub(50, 31, 20);
 #define DRAWING_COLOR  glColor3ub(64, 64, 64);
+#define BG_COLOR       glColor3f(0.8825f, 0.8825f, 0.87f);
 
 void
 Disp_Init(int fnt_size)
@@ -287,7 +288,40 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		glLoadIdentity();
 
 		PushScreenCoordMat();
+		
+		glPushMatrix();
+		
+			if(files && (int)ceil(scroll->amt) > num_lines) {
+				glTranslatef(0.0f, -(int)ceil((scroll->amt - num_lines)*line_height), 0.0f);
+			}
 
+			TEXT_COLOR
+
+			//print files
+			if(!files) {
+				Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
+			} else {
+				for(cur = files, line = 0; cur; cur = cur->next, ++line) {
+					Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
+				}
+			
+				DRAWING_COLOR
+			
+				Disp_DrawOpenCursor(disp_x - 32, 138 + scroll->amt*line_height);
+			}
+		
+		glPopMatrix();
+		
+		BG_COLOR
+			
+		//draw a box so that any scrolling lines go under it
+		glBegin(GL_QUADS);
+			glVertex2f(disp_x, 0);
+			glVertex2f(disp_x, 117);
+			glVertex2f(disp_w - disp_x, 117);
+			glVertex2f(disp_w - disp_x, 0);
+		glEnd();
+		
 		DRAWING_COLOR
 		
 		//draw a line for the heading
@@ -298,25 +332,6 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		
 		//print header
 		Fnt_Print(fnt_reg, "Open", disp_x, 110, 0);
-		
-		if((int)ceil(scroll->amt) > num_lines) {
-			glTranslatef(0.0f, -(int)ceil((scroll->amt - num_lines)*line_height), 0.0f);
-		}
-
-		TEXT_COLOR
-
-		//print files
-		if(!files) {
-			Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
-		} else {
-			for(cur = files, line = 0; cur; cur = cur->next, ++line) {
-				Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
-			}
-			
-			DRAWING_COLOR
-			
-			Disp_DrawOpenCursor(disp_x - 32, 138 + scroll->amt*line_height);
-		}
 		
 		PopScreenCoordMat();
 	glPopMatrix();

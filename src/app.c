@@ -316,12 +316,14 @@ App_Read(FILE * file)
 		size = runetochar(ch, &rune);
 		ch[size] = '\0';
 		
-		printf("Got char of size: %d\n", size);
+		//these print statements really slow down the read...
+		//printf("Got char of size: %d\n", size);
 		
 		App_OnChar(ch);
-		if(i % 4096 == 0) {
+		
+		/*if(i % 4096 == 0) {
 			printf("Filled %ld bytes...\n", i);
-		}
+		}*/
 	}
 	
 	free(buffer);
