@@ -74,8 +74,11 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 		double old_amt = scroll->amt;
 		
 		//scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
-		//scroll->amt += (1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 300.0, 3.0);
+#if defined(_WIN32)
+		scroll->amt += (1 + num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.06);
+#else
 		scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
+#endif
 		
 		//default to false
 		scroll->moving = 0;
@@ -93,7 +96,9 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 				// we are "done"
 				//printf("old_amt: %d new_amt: %d\n", (int)old_amt, (int)scroll->amt);
 				//scroll->amt = trunc(scroll->amt);
+#if !defined(_WIN32)
 				scroll->step = 0;
+#endif
 				++num_scrolls;
 			} else {
 				// not done, so keep moving

@@ -304,6 +304,9 @@ App_Read(FILE * file)
 	printf("Got mem, now reading...\n");
 	
 	result = fread(buffer, 1, len, file);
+
+	//printf("len: %ld result: %ld", len, result);
+
 	if(result != len) {
 		fputs("Reading error for App_Read", stderr);
 		exit(3);
@@ -387,7 +390,7 @@ App_Open(char * the_filename)
 	full_filename = App_CreateFullFilename(the_filename);
 	
 	printf("Opening file: %s\n", full_filename);
-	file = fopen(full_filename, "r");
+	file = fopen(full_filename, "rb");
 	
 	if(!file) {
 		fprintf(stderr, "Could not open requested file!\n");
@@ -439,7 +442,7 @@ App_Save()
 	App_CheckDocsFolder();
 	
 	printf("Saving to file: %s\n", full_filename);
-	file = fopen(full_filename, "w");
+	file = fopen(full_filename, "wb");
 	
 	Frame_Write(frm, file);
 	
