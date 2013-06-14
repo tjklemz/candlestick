@@ -81,10 +81,10 @@ Disp_TypingScreen(Frame * frm, scrolling_t * scroll)
 {	
 	//window coords for start of frame
 	float fnt_width = Fnt_Width(fnt_reg);
-	float line_height = Fnt_LineHeight(fnt_reg) * 1.545 * fnt_width;
+	float line_height = Fnt_LineHeight(fnt_reg) * 1.55 * fnt_width;
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_width)) / 2);
 	//printf("disp_x: %f, disp_w: %d, fnt_width: %f\n", disp_x, disp_w, fnt_width);
-	float disp_y = disp_h / 2;
+	float disp_y = 5 + disp_h / 2;
 	int num_lines;
 	int first_line;
 	int show_cursor;
@@ -274,6 +274,47 @@ Disp_DrawOpenCursor(int x, int y)
 	glEnd();
 }
 
+static
+void
+Disp_DrawOpenIcon(int x, int y)
+{
+	int x1 = x;
+	int x2 = x1 + 40;
+	
+	//the top of the box
+	int y1 = y;
+	int y2 = y1 + 6;
+	
+	//actual box part
+	int y3 = y2 + 2;
+	int y4 = y1 + 38;
+	
+	//the handle part
+	int x3 = x1 + 12;
+	int x4 = x2 - 12;
+	int y5 = y1 + 6 * 3;
+	int y6 = y5 + 4;
+	
+	glBegin(GL_QUADS);
+		glVertex2f(x1, y1);
+		glVertex2f(x1, y2);
+		glVertex2f(x2, y2);
+		glVertex2f(x2, y1);
+		
+		glVertex2f(x1, y3);
+		glVertex2f(x1, y4);
+		glVertex2f(x2, y4);
+		glVertex2f(x2, y3);
+		
+		BG_COLOR
+		
+		glVertex2f(x3, y5);
+		glVertex2f(x3, y6);
+		glVertex2f(x4, y6);
+		glVertex2f(x4, y5);
+	glEnd();
+}
+
 void
 Disp_OpenScreen(Node * files, scrolling_t * scroll)
 {
@@ -283,6 +324,7 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 	//float disp_y = disp_h / 2;
 	Node * cur;
 	int line;
+	int heading_h = 112;
 	
 	glPushMatrix();
 		glLoadIdentity();
@@ -307,7 +349,7 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 			
 				DRAWING_COLOR
 			
-				Disp_DrawOpenCursor(disp_x - 32, 138 + scroll->amt*line_height);
+				Disp_DrawOpenCursor(disp_x - 36, 138 + scroll->amt*line_height);
 			}
 		
 		glPopMatrix();
@@ -317,8 +359,8 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		//draw a box so that any scrolling lines go under it
 		glBegin(GL_QUADS);
 			glVertex2f(disp_x, 0);
-			glVertex2f(disp_x, 117);
-			glVertex2f(disp_w - disp_x, 117);
+			glVertex2f(disp_x, heading_h + 8);
+			glVertex2f(disp_w - disp_x, heading_h + 8);
 			glVertex2f(disp_w - disp_x, 0);
 		glEnd();
 		
@@ -326,12 +368,11 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		
 		//draw a line for the heading
 		glBegin(GL_LINES);
-			glVertex2f(disp_x, 114);
-			glVertex2f(disp_w - disp_x, 114);
+			glVertex2f(disp_x, heading_h);
+			glVertex2f(disp_w - disp_x, heading_h);
 		glEnd();
 		
-		//print header
-		Fnt_Print(fnt_reg, "Open", disp_x, 110, 0);
+		Disp_DrawOpenIcon(disp_x, heading_h - 50);
 		
 		PopScreenCoordMat();
 	glPopMatrix();
