@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
 	App_QuitRequestDel(OnQuitRequest);
 
 	while(!quit) {
-		while(XPending(dpy)) {
+		while(!quit && (XPending(dpy) || !runLoop)) {
 			XNextEvent(dpy, &xev);
 			
 			//have to manually handle the window close message
@@ -366,6 +366,11 @@ int main(int argc, char *argv[])
 				default:
 					break;
 				}
+			}
+			
+			if(!runLoop) {
+				App_OnRender();
+				glXSwapBuffers(dpy, win);
 			}
 		}
 		

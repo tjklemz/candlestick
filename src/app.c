@@ -132,6 +132,12 @@ App_OnDestroy()
 	
 	Line_Destroy(filename);
 	filename = 0;
+	
+	//filename_buf and filename should never point to the same thing,
+	//so this is a valid delete.
+	Line_Destroy(filename_buf);
+	filename_buf = 0;
+	
 	App_DestroyFilesList();
 	
 	Disp_Destroy();
