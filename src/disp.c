@@ -325,6 +325,7 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 	Node * cur;
 	int line;
 	int heading_h = 112;
+	int start_h = heading_h + 46;
 	
 	glPushMatrix();
 		glLoadIdentity();
@@ -341,10 +342,10 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 
 			//print files
 			if(!files) {
-				Fnt_Print(fnt_reg, "No files.", disp_x, 165, 0);
+				Fnt_Print(fnt_reg, "No files.", disp_x, start_h, 0);
 			} else {
 				for(cur = files, line = 0; cur; cur = cur->next, ++line) {
-					Fnt_Print(fnt_reg, (char*)cur->data, disp_x, 158 + line_height*line, 0);
+					Fnt_Print(fnt_reg, (char*)cur->data, disp_x, start_h + line_height*line, 0);
 				}
 			
 				DRAWING_COLOR
