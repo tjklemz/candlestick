@@ -4,6 +4,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#if !defined(_WIN32)
+#define NUM_STEPS 22
+#define STEP_AMT (0.0006f)
+#else
+#define NUM_STEPS 7
+#define STEP_AMT (0.95f)
+#endif
+
 /**************************************************************************
  * Scrolling and Animation
  **************************************************************************/
@@ -44,7 +52,7 @@ void Scroll_TextScroll(scrolling_t * scroll)
 		// not sure why this is dependent on platform...
 		// must have something to do with my animation threading code (in main file)
 #if defined(_WIN32)
-		scroll->amt += amt*pow((double)scroll->step / 100.0, 2.125);
+		scroll->amt += amt*pow((double)scroll->step / 50.0, 1.1);
 #else
 		scroll->amt += amt*pow((double)scroll->step / 100.0, 1.22);
 #endif
@@ -72,10 +80,11 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 		float amt = (scroll->dir == SCROLL_UP) ? -STEP_AMT : STEP_AMT;
 		//double max_amt = abs(amt)*pow((double)(NUM_STEPS - 1) >> 3), 2.125);
 		double old_amt = scroll->amt;
+		scrolling_dir_t old_dir = scroll->dir;
 		
 		//scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
 #if defined(_WIN32)
-		scroll->amt += (1 + num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.06);
+		scroll->amt += 0.2*pow(1 + num_scrolls, 1.1)*amt*pow((double)scroll->step / 30.0, 0.5);
 #else
 		scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
 #endif
@@ -91,14 +100,12 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 			scroll->step = 0;
 		} else {
 			// see if we have passed an integer amount (i.e. a line)
-			if(abs((int)old_amt) < abs((int)scroll->amt) || 
-			   abs((int)old_amt) > abs((int)scroll->amt)) {
-				// we are "done"
-				//printf("old_amt: %d new_amt: %d\n", (int)old_amt, (int)scroll->amt);
-				//scroll->amt = trunc(scroll->amt);
-#if !defined(_WIN32)
+			if((scroll->dir == SCROLL_UP && old_dir == SCROLL_UP && 
+				(int)ceil(old_amt) > (int)ceil(scroll->amt)) ||
+				(scroll->dir == SCROLL_DOWN && (int)old_amt < (int)scroll->amt)) {
+
+				scroll->amt = round(scroll->amt);
 				scroll->step = 0;
-#endif
 				++num_scrolls;
 			} else {
 				// not done, so keep moving
@@ -152,7 +159,7 @@ Scroll_Reset(scrolling_t * scroll)
 	scroll->step = 0;
 	scroll->moving = 0;
 	scroll->amt = 0;
-	scroll->dir = SCROLL_UP; // doesn't matter, but good to know the state
+	//scroll->dir = SCROLL_UP; // doesn't matter, but good to know the state
 	
 	Scroll_AnimEnd(scroll);
 }

@@ -643,7 +643,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			if(app_state == CS_TYPING) {
 				app_state = CS_OPENING;
 				Scroll_Reset(&open_scroll);
-				open_scroll.limit = (double)(App_PopulateFiles() - 1);
+				open_scroll.limit = App_PopulateFiles() - 1;
 				cur_scroll = &open_scroll;
 			}
 			break;

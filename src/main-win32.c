@@ -34,8 +34,8 @@ BOOL rendering = FALSE;
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-#define FPS 25
-static const int SKIP_TICKS = (10000 / FPS);
+#define FPS 60
+static const int SKIP_TICKS = (1000 / FPS);
 
 void uSleep(int waitTime)
 {
@@ -63,9 +63,10 @@ static DWORD WINAPI loop(LPVOID param)
 		next_game_tick += SKIP_TICKS;
 		sleep_time = next_game_tick - GetTickCount();
 
-		if(sleep_time > 0) {
+		if(sleep_time >= 0) {
 			//printf("sleep_time: %d\n", sleep_time);
-			uSleep(sleep_time >> 6);
+			//uSleep(sleep_time >> 6);
+			Sleep(sleep_time);
 		}
 	}
 

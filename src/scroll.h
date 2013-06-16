@@ -1,9 +1,6 @@
 #ifndef SCROLL_H
 #define SCROLL_H
 
-#define NUM_STEPS 22
-#define STEP_AMT (0.0006f)
-
 typedef void (*anim_del_func_t)(void);
 
 struct scrolling_tag;

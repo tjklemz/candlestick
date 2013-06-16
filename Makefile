@@ -19,7 +19,7 @@ ARCHIVE = $(APPNAME).tar.bz2
 #  since this program links to Cocoa.
 # On Windows and Linux, the compile time is almost
 #  negligible.
-CC = cc -Wall -O2
+CC = cc -Wall -Os
 
 ifdef DEBUG
 	CC += -g
