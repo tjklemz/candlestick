@@ -366,8 +366,8 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		//draw a box so that any scrolling lines go under it
 		glBegin(GL_QUADS);
 			glVertex2f(disp_x, 0);
-			glVertex2f(disp_x, heading_h + 8);
-			glVertex2f(disp_w - disp_x, heading_h + 8);
+			glVertex2f(disp_x, heading_h + 12);
+			glVertex2f(disp_w - disp_x, heading_h + 12);
 			glVertex2f(disp_w - disp_x, 0);
 		glEnd();
 		
