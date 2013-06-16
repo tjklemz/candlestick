@@ -149,14 +149,40 @@ static BOOL enterFullscreen(HWND hWnd)
     return TRUE;
 }
 
-static BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int windowedHeight, int windowedPaddingX, int windowedPaddingY) 
+static void getWindowPos(HWND hWnd, int * windowX, int * windowY)
+{
+	HDC windowHDC = GetDC(hWnd);
+	int fullscreenWidth  = GetDeviceCaps(windowHDC, HORZRES);
+	int fullscreenHeight = GetDeviceCaps(windowHDC, VERTRES);
+	*windowX = (fullscreenWidth / 2) - (WIN_INIT_WIDTH / 2);
+	*windowY = (fullscreenHeight / 2) - (WIN_INIT_HEIGHT / 2);
+}
+
+static void ClientResize(HWND hWnd, int nWidth, int nHeight)
+{
+  RECT rcClient, rcWind;
+  POINT ptDiff;
+  GetClientRect(hWnd, &rcClient);
+  GetWindowRect(hWnd, &rcWind);
+  ptDiff.x = (rcWind.right - rcWind.left) - rcClient.right;
+  ptDiff.y = (rcWind.bottom - rcWind.top) - rcClient.bottom;
+  MoveWindow(hWnd, rcWind.left, rcWind.top, nWidth + ptDiff.x, nHeight + ptDiff.y, TRUE);
+}
+
+static BOOL exitFullscreen(HWND hWnd)
 {
     BOOL isChangeSuccessful;
+
+    int windowX;
+    int windowY;
+
+    getWindowPos(hWnd, &windowX, &windowY);
 
     SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_LEFT);
     SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
     isChangeSuccessful = ChangeDisplaySettings(NULL, CDS_RESET) == DISP_CHANGE_SUCCESSFUL;
-    SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, windowedWidth + windowedPaddingX, windowedHeight + windowedPaddingY, SWP_SHOWWINDOW);
+    SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, SWP_SHOWWINDOW);
+    ClientResize(hWnd, WIN_INIT_WIDTH, WIN_INIT_HEIGHT);
     ShowWindow(hWnd, SW_RESTORE);
 
     return isChangeSuccessful;
@@ -169,7 +195,7 @@ static void toggleFullscreen()
 	if(!fullscreen) {
 		fullscreen = enterFullscreen(hWnd);
 	} else {
-		fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
+		fullscreen = !exitFullscreen(hWnd);
 	}
 }
 
@@ -184,6 +210,9 @@ static void onQuitRequest()
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
 				   LPSTR lpCmdLine, int iCmdShow)
 {
+	int windowX;
+	int windowY;
+
 	// register window class
 	wc.style = CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
@@ -196,13 +225,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	wc.lpszMenuName = NULL;
 	wc.lpszClassName = (LPCSTR)APP_NAME;
 	RegisterClass(&wc);
+
+	getWindowPos(NULL, &windowX, &windowY);
 	
 	// create main window
-	hWnd = CreateWindow( 
+	hWnd = CreateWindow(
 		(LPCSTR)APP_NAME, (LPCSTR)APP_NAME, 
 		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-		0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
+		windowX, windowY, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
 		NULL, NULL, hInstance, NULL);
+
+	ClientResize(hWnd, WIN_INIT_WIDTH, WIN_INIT_HEIGHT);
 	
 	// enable OpenGL for the window
 	EnableOpenGL(hWnd, &hDC, &hRC);
@@ -212,7 +245,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	App_AnimationDel(startLoop, stopLoop);
 	App_QuitRequestDel(onQuitRequest);
 	
-	while(GetMessage(&msg, NULL, 0, 0) > 0 && !quit) {
+	while(!quit && GetMessage(&msg, NULL, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
@@ -229,20 +262,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	return 0;
 	//return (int)msg.wParam;
 }
-
-/*inline cs_key_mod_t translateVK(int vk)
-{
-	switch(vk)
-	{
-	case VK_LCONTROL:    return CS_CONTROL_L;    break;
-	case VK_RCONTROL:    return CS_CONTROL_R;    break;
-	case VK_LSHIFT:      return CS_SHIFT_L;      break;
-	case VK_RSHIFT:      return CS_SHIFT_R;      break;
-	case VK_LMENU:       return CS_SUPER_L;      break;
-	case VK_RMENU:       return CS_SUPER_R;      break;
-	default:             return CS_NONE;         break;
-	}
-}*/
 
 // Window Procedure
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
