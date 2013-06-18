@@ -51,6 +51,7 @@ static Atom wmDeleteMessage;
 
 static pthread_t loop_thread;
 static int runLoop = 0;
+static int stopRequested = 0;
 
 int
 timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
@@ -80,8 +81,8 @@ static
 void *
 loop(void * q)
 {
-	//XEvent exp;
-	//Display * d;
+	XEvent exp;
+	Display * d;
 	
 	struct timeval then;
 	struct timeval now;
@@ -90,15 +91,15 @@ loop(void * q)
 	
 	gettimeofday(&then, NULL);
 	
-	//d = XOpenDisplay(NULL);
+	d = XOpenDisplay(NULL);
 	
-	/*memset(&exp, 0, sizeof(exp));
+	memset(&exp, 0, sizeof(exp));
 	exp.type = Expose;
 	exp.xexpose.window = win;
 	XSendEvent(d, win, False, ExposureMask, &exp);
-	XFlush(d);*/
+	XFlush(d);
 	
-	while(runLoop)
+	while(runLoop && !stopRequested)
 	{
         App_OnUpdate();
 		
@@ -112,6 +113,14 @@ loop(void * q)
 		}
 	}
 	
+	memset(&exp, 0, sizeof(exp));
+	exp.type = Expose;
+	exp.xexpose.window = win;
+	XSendEvent(d, win, False, ExposureMask, &exp);
+	XFlush(d);
+	
+	runLoop = 0;
+	
 	return NULL;
 }
 
@@ -120,6 +129,7 @@ void
 startLoop()
 {
 	runLoop = 1;
+	stopRequested = 0;
 	pthread_create(&loop_thread, NULL, loop, NULL);
 }
 
@@ -127,7 +137,7 @@ static
 void
 stopLoop()
 {
-	runLoop = 0;
+	stopRequested = 1;
 	//puts("loop should stop now");
 }
 
@@ -267,7 +277,7 @@ int main(int argc, char *argv[])
 	int ucs;
 	cs_key_mod_t mods = CS_NONE;
 	
-	//XInitThreads();
+	XInitThreads();
 	
 	CreateWindow();
 	
@@ -277,7 +287,7 @@ int main(int argc, char *argv[])
 	App_QuitRequestDel(OnQuitRequest);
 
 	while(!quit) {
-		if(XPending(dpy)) {
+		if(XPending(dpy) || !runLoop) {
 			XNextEvent(dpy, &xev);
 		
 			//have to manually handle the window close message
@@ -332,7 +342,7 @@ int main(int argc, char *argv[])
 					}
 					break;
 				}
-				puts("key press");
+				//puts("key press");
 			} else if(xev.type == KeyRelease) {
 				unsigned short is_retriggered = 0;
 
@@ -350,7 +360,7 @@ int main(int argc, char *argv[])
 				}
 
 				if(!is_retriggered) {
-					puts("real key release");
+					//puts("real key release");
 					//pass in shifted so that it returns uppercase/lowercase
 					sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
 					
