@@ -119,6 +119,8 @@ loop(void * q)
 	XSendEvent(d, win, False, ExposureMask, &exp);
 	XFlush(d);
 	
+	XCloseDisplay(d);
+	
 	runLoop = 0;
 	
 	return NULL;
