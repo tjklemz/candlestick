@@ -86,43 +86,31 @@ loop(void * q)
 	struct timeval then;
 	struct timeval now;
 	struct timeval diff;
-	double sleep_time = 0.0;
+	useconds_t sleep_time = 0;
 	
 	gettimeofday(&then, NULL);
 	
 	//d = XOpenDisplay(NULL);
-	//puts("begin looping");
+	
+	/*memset(&exp, 0, sizeof(exp));
+	exp.type = Expose;
+	exp.xexpose.window = win;
+	XSendEvent(d, win, False, ExposureMask, &exp);
+	XFlush(d);*/
 	
 	while(runLoop)
-	{	
+	{
         App_OnUpdate();
-		
-		// sends Expose event (to redraw)
-		//XLockDisplay(dpy);
-		//XClearArea(d, win, 0, 0, 0, 0, True);
-		//XFlush(d);
-		//XUnlockDisplay(dpy);
-		
-		//XLockDisplay(dpy);
-		//memset(&exp, 0, sizeof(exp));
-		//exp.type = Expose;
-		//exp.xexpose.window = win;
-		//XSendEvent(d, win, False, ExposureMask, &exp);
-		//XFlush(d);
-		//XUnlockDisplay(dpy);
 		
 		then.tv_usec += SKIP_TICKS;
 		gettimeofday(&now, NULL);
 		
 		if(!timeval_subtract(&diff, &then, &now)) {
-			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
+			sleep_time = /*(diff.tv_sec / 10000.0) + */ diff.tv_usec;
 			usleep(sleep_time);
+			//printf("sleep_time: %d diff.tv_sec: %d\n", sleep_time, diff.tv_sec);
 		}
 	}
-	//puts("done with loop");
-	//XFlush(d);
-	//XCloseDisplay(d);
-	//pthread_exit(0);
 	
 	return NULL;
 }
@@ -279,7 +267,7 @@ int main(int argc, char *argv[])
 	int ucs;
 	cs_key_mod_t mods = CS_NONE;
 	
-	XInitThreads();
+	//XInitThreads();
 	
 	CreateWindow();
 	
@@ -289,9 +277,9 @@ int main(int argc, char *argv[])
 	App_QuitRequestDel(OnQuitRequest);
 
 	while(!quit) {
-		while(!quit && (XPending(dpy) || !runLoop)) {
+		if(XPending(dpy)) {
 			XNextEvent(dpy, &xev);
-			
+		
 			//have to manually handle the window close message
 			if (xev.type == ClientMessage &&
 				xev.xclient.data.l[0] == wmDeleteMessage) {
@@ -304,9 +292,8 @@ int main(int argc, char *argv[])
 				//check for resize
 				if(old_gwa.width != gwa.width || old_gwa.height != gwa.height) {
 					App_OnResize(gwa.width, gwa.height);
+					puts("resizing");
 				}
-				
-				//puts("ready for redraw (exposed)");
 			} else if(xev.type == KeyPress) {
 				//pass in shifted so that it returns uppercase/lowercase
 				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
@@ -345,35 +332,48 @@ int main(int argc, char *argv[])
 					}
 					break;
 				}
+				puts("key press");
 			} else if(xev.type == KeyRelease) {
-				//pass in shifted so that it returns uppercase/lowercase
-				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
-				
-				switch(sym) {
-				case XK_Super_L:     mods ^= CS_SUPER_L;                          break;
-				case XK_Super_R:     mods ^= CS_SUPER_R;                          break;
-				case XK_Alt_L:       mods ^= CS_ALT_L;                            break;
-				case XK_Alt_R:       mods ^= CS_ALT_R;                            break;
-				case XK_Control_L:   mods ^= CS_CONTROL_L;                        break;
-				case XK_Control_R:   mods ^= CS_CONTROL_R;                        break;
-				case XK_Shift_L:     mods ^= CS_SHIFT_L;                          break;
-				case XK_Shift_R:     mods ^= CS_SHIFT_R;                          break;
-				case XK_Escape:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
-				case XK_Left:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
-				case XK_Right:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
-				case XK_Up:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
-				case XK_Down:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
-				default:
-					break;
+				unsigned short is_retriggered = 0;
+
+				if(XEventsQueued(dpy, QueuedAfterReading)) {
+					XEvent nev;
+					XPeekEvent(dpy, &nev);
+					
+					if (nev.type == KeyPress && 
+						nev.xkey.time == xev.xkey.time &&
+						nev.xkey.keycode == xev.xkey.keycode) {
+						// delete retriggered KeyPress event
+						// XNextEvent(dpy, &xev);
+						is_retriggered = 1;
+					}
+				}
+
+				if(!is_retriggered) {
+					puts("real key release");
+					//pass in shifted so that it returns uppercase/lowercase
+					sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
+					
+					switch(sym) {
+					case XK_Super_L:     mods ^= CS_SUPER_L;                          break;
+					case XK_Super_R:     mods ^= CS_SUPER_R;                          break;
+					case XK_Alt_L:       mods ^= CS_ALT_L;                            break;
+					case XK_Alt_R:       mods ^= CS_ALT_R;                            break;
+					case XK_Control_L:   mods ^= CS_CONTROL_L;                        break;
+					case XK_Control_R:   mods ^= CS_CONTROL_R;                        break;
+					case XK_Shift_L:     mods ^= CS_SHIFT_L;                          break;
+					case XK_Shift_R:     mods ^= CS_SHIFT_R;                          break;
+					case XK_Escape:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
+					case XK_Left:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
+					case XK_Right:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
+					case XK_Up:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
+					case XK_Down:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
+					default:
+						break;
+					}
 				}
 			}
-			
-			if(!runLoop) {
-				App_OnRender();
-				glXSwapBuffers(dpy, win);
-			}
 		}
-		
 		App_OnRender();
 		glXSwapBuffers(dpy, win);
 	}
