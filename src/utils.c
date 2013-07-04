@@ -24,6 +24,8 @@
 
 #include <math.h>
 
+
+
 /**********************************************************************
  * nextP2
  * 
@@ -78,3 +80,4 @@ PopScreenCoordMat()
 	glPopMatrix();
 	glPopAttrib();
 }
+

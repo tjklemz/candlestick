@@ -77,7 +77,11 @@ ifeq ($(PLAT),win32)
 	GL_LIBS = -lopengl32 -lglu32
 	FT_LIBS = $(LIBDIR)/freetype.lib
 	MAIN_SRC = main-win32.c
-else ifeq ($(PLAT),mac)
+else
+	SRC += timesub.c
+endif
+
+ifeq ($(PLAT),mac)
 	OS_LIBS	= -framework Cocoa
 	GL_LIBS = -framework OpenGL
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a

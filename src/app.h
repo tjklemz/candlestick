@@ -21,13 +21,27 @@
 #ifndef APP_H
 #define APP_H
 
-#define APP_NAME "Candlestick"
+#define APP_NAME "candlestick"
 
 //Golden Rectangle
 #define WIN_INIT_WIDTH  (850 * 1.2)
 #define WIN_INIT_HEIGHT (514 * 1.2)
 
+#define FPS 60
+
+/* 
+ * Win32 uses Sleep, which takes milliseconds
+ * whereas Unix-esque platforms use usleep,
+ * which of course takes microseconds
+ */
+#if defined(_WIN32)
+# define SKIP_TICKS (1000 / FPS)
+#else
+# define SKIP_TICKS (1000000 / FPS)
+#endif
+
 #define FONT_SIZE 24
+
 
 /**************************************************************************
  * Keys
@@ -62,6 +76,7 @@ typedef enum {
 } cs_key_t;
 
 typedef long cs_key_mod_t;
+
 
 /**************************************************************************
  * Methods
@@ -101,3 +116,4 @@ void
 App_QuitRequestDel(void (*OnQuitRequest)(void));
 
 #endif
+

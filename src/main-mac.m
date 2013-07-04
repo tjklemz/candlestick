@@ -20,10 +20,10 @@
  **************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#include <sys/time.h>
 #include "opengl.h"
 #include "app.h"
-
-#include <sys/time.h>
+#include "timesub.h"
 
 @interface SysView : NSOpenGLView
 {
@@ -48,33 +48,6 @@ static BOOL runLoop = FALSE;
 
 @implementation SysView
 
-#define FPS 25
-static const int SKIP_TICKS = (10000 / FPS);
-
-int
-timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
-{
-	/* Perform the carry for the later subtraction by updating y. */
-       if (x->tv_usec < y->tv_usec) {
-         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-         y->tv_usec -= 1000000 * nsec;
-         y->tv_sec += nsec;
-       }
-       if (x->tv_usec - y->tv_usec > 1000000) {
-         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-         y->tv_usec += 1000000 * nsec;
-         y->tv_sec -= nsec;
-       }
-     
-       /* Compute the time remaining to wait.
-          tv_usec is certainly positive. */
-       result->tv_sec = x->tv_sec - y->tv_sec;
-       result->tv_usec = x->tv_usec - y->tv_usec;
-     
-       /* Return 1 if result is negative. */
-       return x->tv_sec < y->tv_sec;
-}
-
 - (void)loop
 {
 	struct timeval then;
@@ -82,13 +55,12 @@ timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
 	struct timeval diff;
 	double sleep_time = 0.0;
 	
+	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+
 	gettimeofday(&then, NULL);
-	
-	while(runLoop)
-	{
-		NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-		
-        App_OnUpdate();
+
+	while(runLoop) {
+		App_OnUpdate();
 		
 		[view setNeedsDisplay:YES];
 		
@@ -99,9 +71,9 @@ timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
 			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
 			usleep(sleep_time);
 		}
-		
-		[pool release];
 	}
+
+	[pool release];
 }
 
 static void startLoop()
@@ -495,3 +467,4 @@ int main(int argc, char **argv)
 	[pool release];
 	return 0;
 }
+

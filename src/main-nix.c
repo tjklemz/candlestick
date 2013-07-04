@@ -29,11 +29,10 @@
 #include "app.h"
 #include "utf.h"
 #include "keysym2ucs.h"
+#include "timesub.h"
 
 #include <X11/Xatom.h>
 
-#define FPS 25
-static const int SKIP_TICKS = (10000 / FPS);
 
 static Display * dpy;
 static Window root;
@@ -53,29 +52,6 @@ static pthread_t loop_thread;
 static int runLoop = 0;
 static int stopRequested = 0;
 
-int
-timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
-{
-	/* Perform the carry for the later subtraction by updating y. */
-       if (x->tv_usec < y->tv_usec) {
-         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-         y->tv_usec -= 1000000 * nsec;
-         y->tv_sec += nsec;
-       }
-       if (x->tv_usec - y->tv_usec > 1000000) {
-         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-         y->tv_usec += 1000000 * nsec;
-         y->tv_sec -= nsec;
-       }
-     
-       /* Compute the time remaining to wait.
-          tv_usec is certainly positive. */
-       result->tv_sec = x->tv_sec - y->tv_sec;
-       result->tv_usec = x->tv_usec - y->tv_usec;
-     
-       /* Return 1 if result is negative. */
-       return x->tv_sec < y->tv_sec;
-}
 
 static
 void *
@@ -99,9 +75,8 @@ loop(void * q)
 	XSendEvent(d, win, False, ExposureMask, &exp);
 	XFlush(d);
 	
-	while(runLoop && !stopRequested)
-	{
-        App_OnUpdate();
+	while(runLoop && !stopRequested) {
+		App_OnUpdate();
 		
 		then.tv_usec += SKIP_TICKS;
 		gettimeofday(&now, NULL);
@@ -140,7 +115,6 @@ void
 stopLoop()
 {
 	stopRequested = 1;
-	//puts("loop should stop now");
 }
 
 static
@@ -184,7 +158,7 @@ CreateWindow()
 	dpy = XOpenDisplay(NULL);
 
 	if(dpy == NULL) {
-		puts("\n\tcannot connect to X server\n");
+		fprintf(stderr, "\n\tcannot connect to X server\n");
 		exit(0);
 	}
 
@@ -192,7 +166,7 @@ CreateWindow()
 	vi = glXChooseVisual(dpy, 0, att);
 
 	if(vi == NULL) {
-		puts("\n\tno appropriate visual found\n");
+		fprintf(stderr, "\n\tno appropriate visual found\n");
 		exit(0);
 	} 
 
@@ -396,3 +370,4 @@ int main(int argc, char *argv[])
 	
 	return 0;
 }
+

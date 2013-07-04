@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if !defined(_WIN32)
-#define NUM_STEPS 22
+// #if !defined(_WIN32)
+// #define NUM_STEPS 22
+// #define STEP_AMT (0.0006f)
+// #else
+#define NUM_STEPS 18
 #define STEP_AMT (0.0006f)
-#else
-#define NUM_STEPS 7
-#define STEP_AMT (0.95f)
-#endif
+// #endif
 
 /**************************************************************************
  * Scrolling and Animation
@@ -49,14 +49,8 @@ void Scroll_TextScroll(scrolling_t * scroll)
 	if((scroll->step < NUM_STEPS || scroll->requested)) {
 		float amt = (scroll->dir == SCROLL_UP) ? STEP_AMT : -STEP_AMT;
 		
-		// not sure why this is dependent on platform...
-		// must have something to do with my animation threading code (in main file)
-#if defined(_WIN32)
-		scroll->amt += amt*pow((double)scroll->step / 50.0, 1.1);
-#else
-		scroll->amt += amt*pow((double)scroll->step / 100.0, 1.22);
-#endif
-		
+		scroll->amt += 1.2*amt*pow((double)scroll->step, 1.8);
+
 		if(scroll->amt < 0) {
 			scroll->amt = 0;
 		} else if(scroll->amt > scroll->limit) {
@@ -83,11 +77,11 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 		scrolling_dir_t old_dir = scroll->dir;
 		
 		//scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
-#if defined(_WIN32)
-		scroll->amt += 0.2*pow(1 + num_scrolls, 1.1)*amt*pow((double)scroll->step / 30.0, 0.5);
-#else
-		scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
-#endif
+// #if defined(_WIN32)
+		scroll->amt += 0.75*pow(1 + num_scrolls, 1.1)*amt*pow((double)scroll->step, 1.7);
+// #else
+		// scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
+// #endif
 		
 		//default to false
 		scroll->moving = 0;
