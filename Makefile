@@ -148,7 +148,7 @@ package-common: $(BINARY) $(RESDIR)/common/*
 	@echo
 	@echo "Packaging $(APPNAME)..."
 	@mkdir -p $(OUTDIR)/$(APPDIR)
-	@mkdir -p $(OUTDIR)/$(DOCDIR)
+	@mkdir -p $(OUTDIR)/$(APPDIR)/$(DOCDIR)
 
 .PHONY: package
 package: package-$(PLAT)

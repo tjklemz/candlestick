@@ -72,16 +72,11 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 	
 	if((scroll->moving || scroll->requested)) {
 		float amt = (scroll->dir == SCROLL_UP) ? -STEP_AMT : STEP_AMT;
-		//double max_amt = abs(amt)*pow((double)(NUM_STEPS - 1) >> 3), 2.125);
 		double old_amt = scroll->amt;
 		scrolling_dir_t old_dir = scroll->dir;
 		
-		//scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
-// #if defined(_WIN32)
-		scroll->amt += 0.15*pow(1 + num_scrolls, 1.2)*amt*pow((double)scroll->step, 1.7);
-// #else
+		scroll->amt += 0.15*pow(1 + num_scrolls, 1.7)*amt*pow((double)scroll->step, 1.75);
 		// scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
-// #endif
 		
 		//default to false
 		scroll->moving = 0;
