@@ -46,6 +46,8 @@ static SysView *view;
 //static BOOL hasBeenSaved = NO;
 static BOOL runLoop = FALSE;
 
+void fullscreen();
+
 @implementation SysView
 
 - (void)loop
@@ -113,6 +115,7 @@ static void stopLoop()
 	
 	App_OnInit();
 	App_AnimationDel(startLoop, stopLoop);
+	App_FullscreenDel(fullscreen);
 }
 
 - (void)reshape
@@ -219,7 +222,7 @@ static void stopLoop()
 	[self populateApplicationMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
 	
-	menuItem = [mainMenu addItemWithTitle:@"File" action:NULL keyEquivalent:@""];
+	/* menuItem = [mainMenu addItemWithTitle:@"File" action:NULL keyEquivalent:@""];
 	submenu = [[[NSMenu alloc] initWithTitle:NSLocalizedString(@"File", @"The File menu")] autorelease];
 	[self populateFileMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
@@ -229,6 +232,7 @@ static void stopLoop()
 	[self populateWindowMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
 	[NSApp setWindowsMenu:submenu];
+	*/
 
 	[NSApp setMainMenu:mainMenu];
 }
@@ -361,6 +365,7 @@ InitialWindowSize()
 	return rect;
 }
 
+
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
 	CGRect cgr;
@@ -415,7 +420,17 @@ InitialWindowSize()
 	[window makeFirstResponder:window.contentView];
 }
 
-- (void)fullscreen:(NSNotification *)notification
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+	//puts("closed!");
+	[NSApp stop:self];
+}
+
+@end
+
+// - (void)fullscreen:(NSNotification *)notification
+void fullscreen()
 {
 	if (isfullscreen) {
 		NSRect frame;
@@ -428,20 +443,14 @@ InitialWindowSize()
 		[window setFrameOrigin:frame.origin];
 		[window setContentSize:frame.size];
 		
-		[self bringTextToFocus];
+		[window makeKeyAndOrderFront:nil];
+		[window setInitialFirstResponder:window.contentView];
+		[window makeFirstResponder:window.contentView];
 	} else {
 		[view enterFullScreenMode:[window screen] withOptions:nil];
 		isfullscreen = 1;
 	}
 }
-
-- (void)windowWillClose:(NSNotification *)notification
-{
-	//puts("closed!");
-	[NSApp stop:self];
-}
-
-@end
 
 int main(int argc, char **argv)
 {
