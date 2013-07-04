@@ -55,11 +55,11 @@ static BOOL runLoop = FALSE;
 	struct timeval diff;
 	double sleep_time = 0.0;
 	
-	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
 	gettimeofday(&then, NULL);
 
 	while(runLoop) {
+		NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+
 		App_OnUpdate();
 		
 		[view setNeedsDisplay:YES];
@@ -71,9 +71,10 @@ static BOOL runLoop = FALSE;
 			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
 			usleep(sleep_time);
 		}
-	}
 
-	[pool release];
+		[pool release];
+	}
+	[view setNeedsDisplay:YES];
 }
 
 static void startLoop()
