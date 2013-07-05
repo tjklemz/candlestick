@@ -48,6 +48,7 @@ static BOOL runLoop = FALSE;
 static int isfullscreen = 0;
 
 void fullscreen();
+void settitle(char*);
 
 
 @implementation SysView
@@ -395,6 +396,11 @@ void fullscreen()
 		[view enterFullScreenMode:[window screen] withOptions:nil];
 		isfullscreen = 1;
 	}
+}
+
+void settitle(char * title)
+{
+	[window setTitle:[NSString stringWithUTF8String:title]];
 }
 
 

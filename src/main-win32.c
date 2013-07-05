@@ -283,25 +283,27 @@ CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_CHAR:
 	{
-		char wide[3] = {0};
-		wide[0] = (char)wParam;
+		char mchar[8] = { '\0' };
+		wchar_t wide = wParam;
+
+		WideCharToMultiByte(CP_UTF8, 0, &wide, 1, mchar, 8, NULL, NULL);
 
 		//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
-		if((unsigned char)wide[0] > 31) {
-			App_OnKeyDown(wide, mods);
-		} else if(wide[0] > 0 && wide[0] <= 26) {
+		if((unsigned char)mchar[0] > 31) {
+			App_OnKeyDown(mchar, mods);
+		} else if(mchar[0] > 0 && mchar[0] <= 26) {
 			if(MODS_COMMAND(mods)) {
-				wide[0] += 'a'-1;
+				mchar[0] += 'a'-1;
 				//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
-				App_OnKeyDown(wide, mods);
+				App_OnKeyDown(mchar, mods);
 			} else {
-				switch(wide[0]) {
+				switch(mchar[0]) {
 				case '\r':
-					wide[0] = '\n';
+					mchar[0] = '\n';
 					//fall through
 				case '\t':
 				case '\b':
-					App_OnKeyDown(wide, mods);
+					App_OnKeyDown(mchar, mods);
 					break;
 				default:
 					break;

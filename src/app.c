@@ -503,13 +503,71 @@ App_Save()
 
 
 static
-void
+int
+App_FileExists(char * filename)
+{
+	FILE * file;
+	
+    if((file = fopen(filename, "r")))
+    {
+        fclose(file);
+        return 1;
+    }
+    return 0;
+}
+
+
+static
+int
 App_SaveAs()
 {
-	//tack on the .txt extension
-	Line_InsertStr(filename, FILE_EXT);
+	int saved = 0;
+	char * test_filename;
+	char * full_test_filename;
+	Line * test;
+	int len;
+
+	len = strlen(Line_Text(filename_buf));
+
+	if(len > 0) {
+
+		test = Line_Init(len);
+		//copy the buffer
+		Line_InsertStr(test, Line_Text(filename_buf));
+		//tack on the .txt extension
+		Line_InsertStr(test, FILE_EXT);
+
+		//create a full filename from the copy
+		test_filename = Line_Text(test);
+		full_test_filename = App_CreateAbsFile(test_filename);
+
+		/*
+		 * If the file already exists, don't do anything.
+		 * This is why the copy was made (test), so that
+		 * upon returning, if nothing happened, the buffer
+		 * is still there, untouched.
+		 */
+
+		if(!App_FileExists(full_test_filename)) {
+			Line_Destroy(filename);
+			filename = test;
+
+			saved = App_Save();
+
+			// don't destroy the buffer if something went wrong,
+			// although we're kinda screwed...
+			if(saved) {
+				Line_Destroy(filename_buf);
+				filename_buf = 0;
+			}
+		} else {
+			Line_Destroy(test);
+		}
+
+		free(full_test_filename);
+	}
 	
-	App_Save();
+	return saved;
 }
 
 
@@ -623,13 +681,7 @@ App_OnCharSave(char * ch)
 		break;
 	case '\n':
 	case '\r':
-		if(strlen(Line_Text(filename_buf)) > 0) {
-			Line_Destroy(filename);
-			filename = filename_buf;
-			filename_buf = 0;
-
-			App_SaveAs();
-
+		if(App_SaveAs()) {
 			app_state = CS_TYPING;
 			cur_scroll = &text_scroll;
 		}
