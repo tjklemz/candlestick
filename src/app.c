@@ -62,6 +62,7 @@ static Node * files = 0;
 
 static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
+static int is_fullscreen = 0;
 static quit_del_func_t quit_del = 0;
 
 static cs_app_state_t app_state = CS_TYPING;
@@ -211,13 +212,10 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 {
 	switch(key) {
 	case CS_ARROW_UP:
-		if(cur_scroll) {
-			Scroll_UpRequested(cur_scroll);
-		}
-		break;
 	case CS_ARROW_DOWN:
 		if(cur_scroll) {
-			Scroll_DownRequested(cur_scroll);
+			scrolling_dir_t dir = (key == CS_ARROW_UP) ? SCROLL_UP : SCROLL_DOWN;
+			Scroll_Requested(cur_scroll, dir);
 		}
 		break;
 	case CS_ESCAPE:
@@ -229,6 +227,11 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 		} else if(app_state == CS_OPENING) {
 			app_state = CS_TYPING;
 			cur_scroll = &text_scroll;
+		} else if(app_state == CS_TYPING) {
+			if(is_fullscreen && fullscreen_del) {
+				fullscreen_del();
+				is_fullscreen = 0;
+			}
 		}
 		break;
 	default:
@@ -636,6 +639,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			puts("fullscreen command combo...");
 			if(fullscreen_del) {
 				fullscreen_del();
+				is_fullscreen = !is_fullscreen;
 			}
 			break;
 		case 'o':

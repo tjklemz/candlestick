@@ -39,10 +39,7 @@ void
 Scroll_Update(scrolling_t * scroll);
 
 void
-Scroll_UpRequested(scrolling_t * scroll);
-
-void
-Scroll_DownRequested(scrolling_t * scroll);
+Scroll_Requested(scrolling_t * scroll, scrolling_dir_t dir);
 
 void
 Scroll_StopRequested(scrolling_t * scroll);

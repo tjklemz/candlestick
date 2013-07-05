@@ -27,7 +27,7 @@
 #define WIN_INIT_WIDTH  (850 * 1.2)
 #define WIN_INIT_HEIGHT (514 * 1.2)
 
-#define FPS 60
+#define FPS 260
 
 /* 
  * Win32 uses Sleep, which takes milliseconds

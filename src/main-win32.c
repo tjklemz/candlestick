@@ -34,9 +34,6 @@ BOOL rendering = FALSE;
 // Function Declarations
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-#define FPS 60
-static const int SKIP_TICKS = (1000 / FPS);
-
 void uSleep(int waitTime)
 {
 	__int64 time1 = 0, time2 = 0, freq = 0;

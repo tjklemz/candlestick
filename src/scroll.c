@@ -8,8 +8,8 @@
 // #define NUM_STEPS 22
 // #define STEP_AMT (0.0006f)
 // #else
-#define NUM_STEPS 18
-#define STEP_AMT (0.0006f)
+#define NUM_STEPS 22
+#define STEP_AMT (0.0004f)
 // #endif
 
 /**************************************************************************
@@ -49,7 +49,7 @@ void Scroll_TextScroll(scrolling_t * scroll)
 	if((scroll->step < NUM_STEPS || scroll->requested)) {
 		float amt = (scroll->dir == SCROLL_UP) ? STEP_AMT : -STEP_AMT;
 		
-		scroll->amt += 1.2*amt*pow((double)scroll->step, 1.8);
+		scroll->amt += amt*pow((double)scroll->step, 1.22);
 
 		if(scroll->amt < 0) {
 			scroll->amt = 0;
@@ -78,7 +78,7 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 		
 		//scroll->amt += amt*pow((double)scroll->step / 100.0, 1.7);
 // #if defined(_WIN32)
-		scroll->amt += 0.75*pow(1 + num_scrolls, 1.1)*amt*pow((double)scroll->step, 1.7);
+		scroll->amt += 0.15*pow(1 + num_scrolls, 1.2)*amt*pow((double)scroll->step, 1.7);
 // #else
 		// scroll->amt += 0.7*(1 + num_scrolls*num_scrolls)*amt*pow((double)scroll->step / 100.0, 1.7);
 // #endif
@@ -123,19 +123,21 @@ Scroll_Update(scrolling_t * scroll)
 }
 
 void
-Scroll_UpRequested(scrolling_t * scroll)
+Scroll_Requested(scrolling_t * scroll, scrolling_dir_t dir)
 {
 	scroll->requested = 1;
-	scroll->dir = SCROLL_UP;
-	
-	Scroll_AnimStart(scroll);
-}
 
-void
-Scroll_DownRequested(scrolling_t * scroll)
-{
-	scroll->requested = 1;
-	scroll->dir = SCROLL_DOWN;
+	/*
+	 * Step keeps track of how long the key's been down.
+	 * If the user presses the other key (changes direction),
+	 * then reset it so the momentum/inertia resets.
+	 */
+
+	if(dir != scroll->dir) {
+		scroll->step = 0;
+	}
+
+	scroll->dir = dir;
 	
 	Scroll_AnimStart(scroll);
 }

@@ -48,6 +48,8 @@ SRCDIR = src
 LIBDIR = lib/$(PLAT)/$(ARCH)
 RESDIR = res
 OUTDIR = package
+# doctor. ha ha.
+DOCDIR = documents
 APPDIR = $(APPNAME)app
 MACAPP = $(APPNAME).app
 FONTDIR = $(RESDIR)/common/font
@@ -146,6 +148,7 @@ package-common: $(BINARY) $(RESDIR)/common/*
 	@echo
 	@echo "Packaging $(APPNAME)..."
 	@mkdir -p $(OUTDIR)/$(APPDIR)
+	@mkdir -p $(OUTDIR)/$(DOCDIR)
 
 .PHONY: package
 package: package-$(PLAT)
