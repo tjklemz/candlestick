@@ -22,8 +22,8 @@
 #define DISPLAY_H
 
 #include "frame.h"
-#include "list.h"
 #include "scroll.h"
+#include "files.h"
 
 void
 Disp_Init(int fnt_size);
@@ -44,7 +44,7 @@ void
 Disp_SaveScreen(char * filename);
 
 void
-Disp_OpenScreen(Node * files, scrolling_t * scroll);
+Disp_OpenScreen(files_t * files, scrolling_t * scroll);
 
 void
 Disp_Resize(int w, int h);

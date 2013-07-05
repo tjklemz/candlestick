@@ -28,6 +28,7 @@
 #include "utf.h"
 #include "list.h"
 #include "scroll.h"
+#include "files.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +60,8 @@ typedef enum {
 static Frame * frm = 0;
 static Line * filename = 0;
 static Line * filename_buf = 0;
-static Node * files = 0;
+
+files_t * files = 0; 
 
 static update_title_del_func_t update_title_del = 0;
 
@@ -141,17 +143,17 @@ void
 App_DestroyFilesList()
 {
 	if(files) {
-		Node * travel = files;
-		
-		while(travel) {
-			free(travel->data);
-			travel->data = 0;
-			travel = travel->next;
+		int i;
+		for(i = 0; i < files->len; ++i) {
+			free(files->data[i]);
 		}
-		
-		Node_Destroy(files);
-		files = 0;
+		free(files->data);
+
+		files->data = 0;
+		files->len = 0;
 	}
+
+	files = 0;
 }
 
 
@@ -422,9 +424,10 @@ App_SaveFilename(char * the_filename)
 
 
 static
-void
+int
 App_Open(char * the_filename)
 {
+	int opened = 0;
 	FILE * file;
 	char * full_filename;
 	
@@ -437,19 +440,18 @@ App_Open(char * the_filename)
 		fprintf(stderr, "Could not open requested file!\n");
 		// do nothing... (we'll take the Mac approach for now)
 	} else {
+		opened = 1;
 		App_Read(file);
 
 		fclose(file);
 		printf("...Done.\n");
 
 		App_SaveFilename(the_filename);
-
-		Scroll_Reset(&text_scroll);
-		cur_scroll = &text_scroll;
-		app_state = CS_TYPING;
 	}
 	
 	free(full_filename);
+
+	return opened;
 }
 
 
@@ -584,10 +586,11 @@ static
 int
 App_PopulateFiles()
 {
-	Node * cur = 0;
-	int num_files = 0;
-	
 	App_DestroyFilesList();
+
+	files = (files_t*)malloc(sizeof(files_t));
+	files->len = 0;
+	files->data = 0;
 	
 	App_CheckDocsFolder();
 	
@@ -608,25 +611,18 @@ App_PopulateFiles()
 			//only do something if the thing is an actual file and is .txt
 			if(stat(filename_full, &st) != -1) {
 				if(S_ISREG(st.st_mode & S_IFMT)) {
+
 					int len = strlen(dp->d_name);
+
 					if(len > 4 && !strcmp(&dp->d_name[len - 4], FILE_EXT)) {
 						//alloc storage for the filename
-						Node * file = Node_Init();
 						char * filename = malloc(file_len + 1);
 						//copy the filename
 						strcpy(filename, dp->d_name);
 						//store it
-						file->data = (void*)filename;
-						//add the file to the list
-						if(!files) {
-							files = file;
-							cur = files;
-						} else {
-							Node_Append(cur, file);
-							//update the tail pointer
-							cur = cur->next;
-						}
-						++num_files;
+						files->data = (char**)realloc(files->data, (files->len + 1) * sizeof(char*));
+						files->data[files->len] = filename;
+						files->len += 1;
 					}
 				}
 			}
@@ -646,21 +642,12 @@ App_PopulateFiles()
 
 		if(hFile != -1L) {
 			do {
-				Node * file = Node_Init();
 				char * filename = (char*)malloc(strlen(file_d.name)+1);
 				strcpy(filename, file_d.name);
-				file->data = (void*)filename;
-				// could possibly change list structure to contain a head and tail empty node
-				// then don't have to have this if statement
-				if(!files) {
-					files = file;
-					cur = files;
-				} else {
-					Node_Append(cur, file);
-					//update the tail pointer
-					cur = cur->next;
-				}
-				++num_files;
+
+				files->data = (char**)realloc(files->data, (files->len + 1) * sizeof(char*));
+				files->data[files->len] = filename;
+				files->len += 1;
 			} while(_findnext(hFile, &file_d) == 0);
 		}
 
@@ -668,7 +655,7 @@ App_PopulateFiles()
 	}
 #endif
 	
-	return num_files;
+	return files->len;
 }
 
 
@@ -707,17 +694,19 @@ App_OnCharOpen(char * ch)
 	case '\n':
 	case '\r':
 	{
-		Node * cur;
-		int i;
 		double amt = open_scroll.amt;
 		int file_num = (int)(open_scroll.dir == SCROLL_UP ? ceil(amt) : floor(amt));
 		
-		for(cur = files, i = 0; cur && i != file_num; cur = cur->next, ++i) {
-			//just chill
-		}
-		
-		if(cur) {
-			App_Open((char*)cur->data);
+		if(file_num < files->len) {
+			char * filename = files->data[file_num];
+
+			if(App_Open(filename)) {
+				Scroll_Reset(&text_scroll);
+				cur_scroll = &text_scroll;
+				app_state = CS_TYPING;
+
+				App_DestroyFilesList();
+			}
 		} else {
 			// this should never happen so long as the scrolling logic stays withing
 			// the scrolling bounds (i.e. scroll->limit remains valid)

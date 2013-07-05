@@ -323,14 +323,11 @@ Disp_DrawOpenIcon(int x, int y)
 }
 
 void
-Disp_OpenScreen(Node * files, scrolling_t * scroll)
+Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
 	int line_height = 40;
 	int num_lines = (int)ceil(disp_h / line_height) - 6;
-	//float disp_y = disp_h / 2;
-	Node * cur;
-	int line;
 	int heading_h = 112;
 	int start_h = heading_h + 46;
 	float scroll_amt = scroll->amt * line_height;
@@ -360,8 +357,9 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 			if(!files) {
 				Fnt_Print(fnt_reg, "No files.", disp_x, start_h, 0);
 			} else {
-				for(cur = files, line = 0; cur; cur = cur->next, ++line) {
-					Fnt_Print(fnt_reg, (char*)cur->data, disp_x, start_h + line_height*line, 0);
+				int i;
+				for(i = 0; i < files->len; ++i) {
+					Fnt_Print(fnt_reg, files->data[i], disp_x, start_h + line_height*i, 0);
 				}
 			}
 		
