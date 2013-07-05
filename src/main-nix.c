@@ -254,6 +254,13 @@ OnQuitRequest()
 }
 
 
+void
+UpdateTitle(char * title)
+{
+	XStoreName(dpy, win, title);
+}
+
+
 int main(int argc, char *argv[])
 {
 	char text[255] = { '\0' };
@@ -265,10 +272,11 @@ int main(int argc, char *argv[])
 	
 	CreateWindow();
 	
-	App_OnInit();
 	App_AnimationDel(startLoop, stopLoop);
 	App_FullscreenDel(ToggleFullscreen);
 	App_QuitRequestDel(OnQuitRequest);
+	App_UpdateTitleDel(UpdateTitle);
+	App_OnInit();
 
 	while(!quit) {
 		if(XPending(dpy) || !runLoop) {

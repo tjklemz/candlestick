@@ -48,7 +48,7 @@ static BOOL runLoop = FALSE;
 static int isfullscreen = 0;
 
 void fullscreen();
-void settitle(char*);
+void updatetitle(char*);
 
 
 @implementation SysView
@@ -121,9 +121,10 @@ static void stopLoop()
     GLint swapInt = 1;
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 	
-	App_OnInit();
 	App_AnimationDel(startLoop, stopLoop);
 	App_FullscreenDel(fullscreen);
+	App_UpdateTitleDel(updatetitle);
+	App_OnInit();
 }
 
 
@@ -398,7 +399,7 @@ void fullscreen()
 	}
 }
 
-void settitle(char * title)
+void updatetitle(char * title)
 {
 	[window setTitle:[NSString stringWithUTF8String:title]];
 }
