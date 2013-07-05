@@ -69,6 +69,7 @@ SRC = \
   rune.c \
   scroll.c \
   files.c \
+  natcmp.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2

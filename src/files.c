@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #if defined(__unix__) || defined(__APPLE__)
 #  include <dirent.h>
@@ -13,6 +14,9 @@
 #  include <windows.h>
 #  include <io.h>
 #endif
+
+#include "natcmp.h"
+
 
 static
 void
@@ -94,6 +98,10 @@ Files_Populate()
 		_findclose(hFile);
 	}
 #endif
+
+	if(files->len > 1) {
+		qsort(files->names, files->len, sizeof(files->names[0]), natcmp);
+	}
 	
 	return files;
 }
