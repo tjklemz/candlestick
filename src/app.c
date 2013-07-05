@@ -28,6 +28,7 @@
 #include "utf.h"
 #include "list.h"
 #include "scroll.h"
+#include "files.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,16 +36,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <math.h>
-
-#if defined(__unix__) || defined(__APPLE__)
-#  include <dirent.h>
-#  include <sys/types.h>
-#  include <sys/stat.h>
-#  include <unistd.h>
-#elif defined(_WIN32)
-#  include <windows.h>
-#  include <io.h>
-#endif
+ 
 
 typedef void (*fullscreen_del_func_t)(void);
 typedef void (*quit_del_func_t)(void);
@@ -59,7 +51,8 @@ typedef enum {
 static Frame * frm = 0;
 static Line * filename = 0;
 static Line * filename_buf = 0;
-static Node * files = 0;
+
+files_t * files = 0; 
 
 static update_title_del_func_t update_title_del = 0;
 
@@ -72,17 +65,6 @@ static cs_app_state_t app_state = CS_TYPING;
 static scrolling_t open_scroll = {0};
 static scrolling_t text_scroll = {0};
 static scrolling_t * cur_scroll;
-
-#if defined(__APPLE__)
-// assumes exe lives in Appname.app/Contents/MacOS
-#    define DOCS_FOLDER "../../../documents/"
-#else
-#    define DOCS_FOLDER "./documents/"
-#endif
-
-#define FILE_EXT ".txt"
-#define FILE_EXT_LEN 4
-#define MAX_FILE_CHARS (CHARS_PER_LINE - FILE_EXT_LEN)
 
 
 static
@@ -136,25 +118,6 @@ App_OnInit()
 }
 
 
-static
-void
-App_DestroyFilesList()
-{
-	if(files) {
-		Node * travel = files;
-		
-		while(travel) {
-			free(travel->data);
-			travel->data = 0;
-			travel = travel->next;
-		}
-		
-		Node_Destroy(files);
-		files = 0;
-	}
-}
-
-
 void
 App_OnDestroy()
 {
@@ -169,7 +132,7 @@ App_OnDestroy()
 	Line_Destroy(filename_buf);
 	filename_buf = 0;
 	
-	App_DestroyFilesList();
+	Files_Destroy(files);
 	
 	Disp_Destroy();
 	
@@ -376,33 +339,6 @@ App_Read(FILE * file)
 
 
 /**************************************************************************
- * CreateAbsFile
- *
- * Will return a newly allocated full_filename that has everything
- * needed to save or open (i.e. actual file access).
- *
- * Expects the current "filename" to be valid (and have an extension
- * if there is one).
- **************************************************************************/
-
-static
-char *
-App_CreateAbsFile(char * filename)
-{
-	int filename_size;
-	char * full_filename;
-
-	filename_size = strlen(DOCS_FOLDER) + strlen(filename) + 1;
-	full_filename = (char*)malloc(filename_size * sizeof(char));
-	
-	strcpy(full_filename, DOCS_FOLDER);
-	strcat(full_filename, filename);
-	
-	return full_filename;
-}
-
-
-/**************************************************************************
  * SaveFilename
  *
  * Expects the filename as "name.txt" (or whatever),
@@ -422,13 +358,14 @@ App_SaveFilename(char * the_filename)
 
 
 static
-void
+int
 App_Open(char * the_filename)
 {
+	int opened = 0;
 	FILE * file;
 	char * full_filename;
 	
-	full_filename = App_CreateAbsFile(the_filename);
+	full_filename = Files_GetAbsPath(the_filename);
 	
 	printf("Opening file: %s\n", full_filename);
 	file = fopen(full_filename, "rb");
@@ -437,39 +374,18 @@ App_Open(char * the_filename)
 		fprintf(stderr, "Could not open requested file!\n");
 		// do nothing... (we'll take the Mac approach for now)
 	} else {
+		opened = 1;
 		App_Read(file);
 
 		fclose(file);
 		printf("...Done.\n");
 
 		App_SaveFilename(the_filename);
-
-		Scroll_Reset(&text_scroll);
-		cur_scroll = &text_scroll;
-		app_state = CS_TYPING;
 	}
 	
 	free(full_filename);
-}
 
-
-static
-void
-App_CheckDocsFolder()
-{
-#if defined(__unix__) || defined(__APPLE__)
-	{
-		struct stat st = {0};
-
-		if(stat(DOCS_FOLDER, &st) == -1) {
-			mkdir(DOCS_FOLDER, (S_IRWXU | S_IRWXG | S_IRWXO));
-		}
-	}
-#elif defined(_WIN32)
-	{
-		CreateDirectory(DOCS_FOLDER, NULL);
-	}
-#endif
+	return opened;
 }
 
 
@@ -480,9 +396,9 @@ App_Save()
 	FILE * file;
 	
 	char * the_filename = Line_Text(filename);
-	char * full_filename = App_CreateAbsFile(the_filename);
+	char * full_filename = Files_GetAbsPath(the_filename);
 	
-	App_CheckDocsFolder();
+	Files_CheckDocDir();
 	
 	printf("Saving to file: %s\n", full_filename);
 	file = fopen(full_filename, "wb");
@@ -499,21 +415,6 @@ App_Save()
 
 	// bad
 	return 0;
-}
-
-
-static
-int
-App_FileExists(char * filename)
-{
-	FILE * file;
-	
-    if((file = fopen(filename, "r")))
-    {
-        fclose(file);
-        return 1;
-    }
-    return 0;
 }
 
 
@@ -539,7 +440,7 @@ App_SaveAs()
 
 		//create a full filename from the copy
 		test_filename = Line_Text(test);
-		full_test_filename = App_CreateAbsFile(test_filename);
+		full_test_filename = Files_GetAbsPath(test_filename);
 
 		/*
 		 * If the file already exists, don't do anything.
@@ -548,7 +449,7 @@ App_SaveAs()
 		 * is still there, untouched.
 		 */
 
-		if(!App_FileExists(full_test_filename)) {
+		if(!Files_Exists(full_test_filename)) {
 			Line_Destroy(filename);
 			filename = test;
 
@@ -568,107 +469,6 @@ App_SaveAs()
 	}
 	
 	return saved;
-}
-
-
-/**************************************************************************
- * PopulateFiles
- *
- * This only allows ".txt" extensions at the moment.
- * Creates the list of filenames (just the names, with extensions).
- *
- * Returns the number of files that are now in the list.
- **************************************************************************/
-
-static
-int
-App_PopulateFiles()
-{
-	Node * cur = 0;
-	int num_files = 0;
-	
-	App_DestroyFilesList();
-	
-	App_CheckDocsFolder();
-	
-#if defined(__unix__) || defined(__APPLE__)
-	{
-		struct dirent * dp;
-		DIR * dfd;
-		
-		dfd = opendir(DOCS_FOLDER);
-		
-		while((dp = readdir(dfd))) {
-			struct stat st = {0};
-			int file_len = strlen(dp->d_name);
-			char * filename_full = malloc(strlen(dp->d_name) + strlen(DOCS_FOLDER) + 1);
-			
-			sprintf(filename_full, "%s%s", DOCS_FOLDER, dp->d_name);
-			
-			//only do something if the thing is an actual file and is .txt
-			if(stat(filename_full, &st) != -1) {
-				if(S_ISREG(st.st_mode & S_IFMT)) {
-					int len = strlen(dp->d_name);
-					if(len > 4 && !strcmp(&dp->d_name[len - 4], FILE_EXT)) {
-						//alloc storage for the filename
-						Node * file = Node_Init();
-						char * filename = malloc(file_len + 1);
-						//copy the filename
-						strcpy(filename, dp->d_name);
-						//store it
-						file->data = (void*)filename;
-						//add the file to the list
-						if(!files) {
-							files = file;
-							cur = files;
-						} else {
-							Node_Append(cur, file);
-							//update the tail pointer
-							cur = cur->next;
-						}
-						++num_files;
-					}
-				}
-			}
-		}
-		
-		closedir(dfd);
-	}
-#elif defined(_WIN32)
-	{
-		struct _finddata_t file_d;
-		long hFile;
-
-		char search[60];
-		sprintf(search, "%s*%s", DOCS_FOLDER, FILE_EXT);
-
-		hFile = _findfirst(search, &file_d);
-
-		if(hFile != -1L) {
-			do {
-				Node * file = Node_Init();
-				char * filename = (char*)malloc(strlen(file_d.name)+1);
-				strcpy(filename, file_d.name);
-				file->data = (void*)filename;
-				// could possibly change list structure to contain a head and tail empty node
-				// then don't have to have this if statement
-				if(!files) {
-					files = file;
-					cur = files;
-				} else {
-					Node_Append(cur, file);
-					//update the tail pointer
-					cur = cur->next;
-				}
-				++num_files;
-			} while(_findnext(hFile, &file_d) == 0);
-		}
-
-		_findclose(hFile);
-	}
-#endif
-	
-	return num_files;
 }
 
 
@@ -707,17 +507,19 @@ App_OnCharOpen(char * ch)
 	case '\n':
 	case '\r':
 	{
-		Node * cur;
-		int i;
 		double amt = open_scroll.amt;
 		int file_num = (int)(open_scroll.dir == SCROLL_UP ? ceil(amt) : floor(amt));
 		
-		for(cur = files, i = 0; cur && i != file_num; cur = cur->next, ++i) {
-			//just chill
-		}
-		
-		if(cur) {
-			App_Open((char*)cur->data);
+		if(file_num < files->len) {
+			char * filename = files->names[file_num];
+
+			if(App_Open(filename)) {
+				Scroll_Reset(&text_scroll);
+				cur_scroll = &text_scroll;
+				app_state = CS_TYPING;
+
+				Files_Destroy(files);
+			}
 		} else {
 			// this should never happen so long as the scrolling logic stays withing
 			// the scrolling bounds (i.e. scroll->limit remains valid)
@@ -747,7 +549,10 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			if(app_state == CS_TYPING) {
 				app_state = CS_OPENING;
 				Scroll_Reset(&open_scroll);
-				open_scroll.limit = App_PopulateFiles() - 1;
+
+				Files_Destroy(files);
+				files = Files_Populate();
+				open_scroll.limit = files->len - 1;
 				cur_scroll = &open_scroll;
 			}
 			break;
