@@ -36,8 +36,6 @@
 }
 +(void)populateMainMenu;
 +(void)populateApplicationMenu:(NSMenu *)aMenu;
-+(void)populateWindowMenu:(NSMenu *)aMenu;
-+(void)populateFileMenu:(NSMenu *)aMenu;
 -(void)bringTextToFocus;
 @end
 
@@ -334,7 +332,7 @@ InitialWindowSize()
 		defer: YES
 		screen: [NSScreen mainScreen]];
 	[window setContentMinSize:NSMakeSize(WIN_INIT_WIDTH, WIN_INIT_HEIGHT / 2)];
-	[window setTitle: [NSString stringWithUTF8String:APP_NAME]]; //[[NSProcessInfo processInfo] processName]];
+	//[window setTitle: [NSString stringWithUTF8String:APP_NAME]]; //[[NSProcessInfo processInfo] processName]];
 	[window setAcceptsMouseMovedEvents: YES];
 	[window setDelegate: [NSApp delegate]];
 
@@ -349,6 +347,8 @@ InitialWindowSize()
 	//[window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 
 	[window makeKeyAndOrderFront:nil];
+	// redraw the title bar
+	[window display];
 }
 
 
