@@ -46,7 +46,7 @@ typedef struct scrolling_tag {
 	double limit;
 	scrolling_dir_t dir;
 	anim_del_t * anim_del;
-	scroll_func_t update; 
+	scroll_func_t on_update; 
 } scrolling_t;
 
 void

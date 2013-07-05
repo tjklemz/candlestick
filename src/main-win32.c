@@ -231,6 +231,16 @@ onQuitRequest()
 }
 
 
+static
+void
+UpdateTitle(char * title)
+{
+	wchar_t wtitle[256];
+	MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256);
+	SetWindowText(hWnd, title);
+}
+
+
 LRESULT
 CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -383,10 +393,11 @@ WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// enable OpenGL for the window
 	EnableOpenGL(hWnd, &hDC, &hRC);
 
-	App_OnInit();
 	App_FullscreenDel(toggleFullscreen);
 	App_AnimationDel(startLoop, stopLoop);
 	App_QuitRequestDel(onQuitRequest);
+	App_UpdateTitleDel(UpdateTitle);
+	App_OnInit();
 	
 	while(!quit && GetMessage(&msg, NULL, 0, 0) > 0) {
 		TranslateMessage(&msg);

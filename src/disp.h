@@ -35,6 +35,9 @@ void
 Disp_BeginRender();
 
 void
+Disp_TriggerSaveAnim();
+
+void
 Disp_TypingScreen(Frame * frm, scrolling_t * scroll);
 
 void

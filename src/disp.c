@@ -73,6 +73,12 @@ Disp_BeginRender()
 	TEXT_COLOR
 }
 
+void
+Disp_TriggerSaveAnim()
+{
+	
+}
+
 #define DISP_LINE_PADDING 2
 
 //Frame is passed in, since input needs to deal with the Frame

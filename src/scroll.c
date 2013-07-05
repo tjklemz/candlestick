@@ -130,7 +130,7 @@ void Scroll_OpenScroll(scrolling_t * scroll)
 void
 Scroll_Update(scrolling_t * scroll)
 {
-	scroll->update(scroll);
+	scroll->on_update(scroll);
 }
 
 void

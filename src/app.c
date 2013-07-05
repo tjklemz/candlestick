@@ -48,6 +48,7 @@
 
 typedef void (*fullscreen_del_func_t)(void);
 typedef void (*quit_del_func_t)(void);
+typedef void (*update_title_del_func_t)(char*);
 
 typedef enum {
 	CS_TYPING,
@@ -59,6 +60,8 @@ static Frame * frm = 0;
 static Line * filename = 0;
 static Line * filename_buf = 0;
 static Node * files = 0;
+
+static update_title_del_func_t update_title_del = 0;
 
 static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
@@ -82,6 +85,30 @@ static scrolling_t * cur_scroll;
 #define MAX_FILE_CHARS (CHARS_PER_LINE - FILE_EXT_LEN)
 
 
+static
+void
+App_UpdateTitle(int dirty)
+{
+	static int old_state = 0;
+
+	if(dirty && old_state == dirty) {
+		//nothing to do here
+	} else if(update_title_del) {
+		char buf[512]; //8 * 64 = 512
+		char * title = filename ? Line_Text(filename) : "untitled";
+
+		if(dirty) {
+			sprintf(buf, "*%s", title);
+		} else {
+			strcpy(buf, title);
+		}
+
+		update_title_del(buf);
+	}
+
+	old_state = dirty;
+}
+
 void
 App_OnInit()
 {	
@@ -92,8 +119,10 @@ App_OnInit()
 	 */
 	if(!frm) {
 		frm = Frame_Init();
-		text_scroll.update = Scroll_TextScroll;
-		open_scroll.update = Scroll_OpenScroll;
+		text_scroll.on_update = Scroll_TextScroll;
+		open_scroll.on_update = Scroll_OpenScroll;
+
+		App_UpdateTitle(1);
 	} else {
 		Disp_Destroy();
 		text_scroll.requested = 0;
@@ -347,7 +376,7 @@ App_Read(FILE * file)
 
 
 /**************************************************************************
- * CreateFullFilename
+ * CreateAbsFile
  *
  * Will return a newly allocated full_filename that has everything
  * needed to save or open (i.e. actual file access).
@@ -358,7 +387,7 @@ App_Read(FILE * file)
 
 static
 char *
-App_CreateFullFilename(char * filename)
+App_CreateAbsFile(char * filename)
 {
 	int filename_size;
 	char * full_filename;
@@ -387,6 +416,8 @@ App_SaveFilename(char * the_filename)
 	Line_Destroy(filename);
 	filename = Line_Init(strlen(the_filename) + 1);
 	Line_InsertStr(filename, the_filename);
+
+	App_UpdateTitle(0);
 }
 
 
@@ -397,7 +428,7 @@ App_Open(char * the_filename)
 	FILE * file;
 	char * full_filename;
 	
-	full_filename = App_CreateFullFilename(the_filename);
+	full_filename = App_CreateAbsFile(the_filename);
 	
 	printf("Opening file: %s\n", full_filename);
 	file = fopen(full_filename, "rb");
@@ -443,26 +474,31 @@ App_CheckDocsFolder()
 
 
 static
-void
+int
 App_Save()
 {
 	FILE * file;
 	
 	char * the_filename = Line_Text(filename);
-	char * full_filename = App_CreateFullFilename(the_filename);
+	char * full_filename = App_CreateAbsFile(the_filename);
 	
 	App_CheckDocsFolder();
 	
 	printf("Saving to file: %s\n", full_filename);
 	file = fopen(full_filename, "wb");
-	
-	Frame_Write(frm, file);
-	
-	fclose(file);
-	
-	free(full_filename);
-	
-	puts("...Done.");
+
+	if(file) {
+		Frame_Write(frm, file);
+		fclose(file);
+		free(full_filename);
+		
+		puts("...Done.");
+		App_UpdateTitle(0);
+		return 1;
+	}
+
+	// bad
+	return 0;
 }
 
 
@@ -646,7 +682,7 @@ App_OnCharOpen(char * ch)
 
 void
 App_OnKeyDown(char * ch, cs_key_mod_t mods)
-{	
+{
 	if(MODS_COMMAND(mods)) {
 		switch(*ch) {
 		case 'f':
@@ -675,7 +711,9 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 					cur_scroll = NULL;
 					filename_buf = Line_Init(CHARS_PER_LINE);
 				} else {
-					App_Save();
+					if(App_Save()) {
+						Disp_TriggerSaveAnim();
+					}
 				}
 			}
 			break;
@@ -686,6 +724,8 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 		if(app_state == CS_TYPING) {
 			Scroll_Reset(&text_scroll);
 			App_OnChar(ch);
+
+			App_UpdateTitle(1);
 		} else if(app_state == CS_SAVING) {
 			App_OnCharSave(ch);
 		} else if(app_state == CS_OPENING) {
@@ -727,4 +767,10 @@ void
 App_QuitRequestDel(void (*Quit)(void))
 {
 	quit_del = Quit;
+}
+
+void
+App_UpdateTitleDel(void (*UpdateTitle)(char*))
+{
+	update_title_del = UpdateTitle;
 }

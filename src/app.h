@@ -115,5 +115,8 @@ App_FullscreenDel(void (*ToggleFullscreen)(void));
 void
 App_QuitRequestDel(void (*OnQuitRequest)(void));
 
+void
+App_UpdateTitleDel(void (*UpdateTitle)(char*));
+
 #endif
 
