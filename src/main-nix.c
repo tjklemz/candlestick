@@ -101,6 +101,7 @@ loop(void * q)
 	return NULL;
 }
 
+
 static
 void
 startLoop()
@@ -110,12 +111,14 @@ startLoop()
 	pthread_create(&loop_thread, NULL, loop, NULL);
 }
 
+
 static
 void
 stopLoop()
 {
 	stopRequested = 1;
 }
+
 
 static
 void
@@ -124,6 +127,7 @@ EnableOpenGL()
 	glc = glXCreateContext(dpy, vi, NULL, GL_TRUE);
 	glXMakeCurrent(dpy, win, glc);
 }
+
 
 static
 void
@@ -136,6 +140,7 @@ DestroyWindow()
 	XCloseDisplay(dpy);
 }
 
+
 static
 void
 Quit()
@@ -143,6 +148,7 @@ Quit()
 	DestroyWindow();
 	exit(0);
 }
+
 
 static
 void
@@ -230,6 +236,7 @@ CreateWindow()
 	XRaiseWindow(dpy, win);
 }
 
+
 void
 ToggleFullscreen()
 {
@@ -239,12 +246,13 @@ ToggleFullscreen()
 	App_OnInit();
 }
 
+
 void
 OnQuitRequest()
 {
-	puts("Quit requested...");
 	quit = 1;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -269,7 +277,6 @@ int main(int argc, char *argv[])
 			//have to manually handle the window close message
 			if (xev.type == ClientMessage &&
 				xev.xclient.data.l[0] == wmDeleteMessage) {
-				puts("Quitting...");
 				quit = 1;
 			} else if(xev.type == Expose) {
 				XWindowAttributes old_gwa = gwa;
@@ -278,7 +285,6 @@ int main(int argc, char *argv[])
 				//check for resize
 				if(old_gwa.width != gwa.width || old_gwa.height != gwa.height) {
 					App_OnResize(gwa.width, gwa.height);
-					puts("resizing");
 				}
 			} else if(xev.type == KeyPress) {
 				//pass in shifted so that it returns uppercase/lowercase
@@ -360,6 +366,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+
 		App_OnRender();
 		glXSwapBuffers(dpy, win);
 	}
@@ -370,4 +377,3 @@ int main(int argc, char *argv[])
 	
 	return 0;
 }
-

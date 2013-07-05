@@ -25,6 +25,7 @@
 #include "app.h"
 #include "timesub.h"
 
+
 @interface SysView : NSOpenGLView
 {
 }
@@ -40,13 +41,14 @@
 -(void)bringTextToFocus;
 @end
 
-static int isfullscreen = 0;
+
 static NSWindow *window;
 static SysView *view;
-//static BOOL hasBeenSaved = NO;
 static BOOL runLoop = FALSE;
+static int isfullscreen = 0;
 
 void fullscreen();
+
 
 @implementation SysView
 
@@ -76,8 +78,10 @@ void fullscreen();
 
 		[pool release];
 	}
+	
 	[view setNeedsDisplay:YES];
 }
+
 
 static void startLoop()
 {
@@ -85,10 +89,12 @@ static void startLoop()
 	[NSThread detachNewThreadSelector:@selector(loop) toTarget:view withObject:nil];
 }
 
+
 static void stopLoop()
 {
 	runLoop = FALSE;
 }
+
 
 - (id)initWithFrame:(NSRect)frameRect
 {
@@ -107,6 +113,7 @@ static void stopLoop()
 	return self;
 }
 
+
 - (void)prepareOpenGL
 {
 	// Synchronize buffer swaps with vertical refresh rate
@@ -118,6 +125,7 @@ static void stopLoop()
 	App_FullscreenDel(fullscreen);
 }
 
+
 - (void)reshape
 {
 	int w = [[[self window] contentView] bounds].size.width;
@@ -125,6 +133,7 @@ static void stopLoop()
 	
 	App_OnResize(w, h);
 }
+
 
 - (void)drawRect:(NSRect)rect
 {
@@ -134,10 +143,12 @@ static void stopLoop()
 	[[self openGLContext] flushBuffer];
 }
 
+
 - (BOOL)acceptsFirstResponder
 {
 	return YES;
 }
+
 
 #define UP_ARROW    126
 #define DOWN_ARROW  125
@@ -182,6 +193,7 @@ static void stopLoop()
 	[self setNeedsDisplay:YES];
 }
 
+
 - (void)keyUp:(NSEvent *)anEvent
 {
 	cs_key_mod_t mods = CS_NONE;
@@ -208,6 +220,7 @@ static void stopLoop()
 
 @end
 
+
 @implementation SysDelegate
 
 +(void)populateMainMenu
@@ -221,25 +234,14 @@ static void stopLoop()
 	[NSApp performSelector:@selector(setAppleMenu:) withObject:submenu];
 	[self populateApplicationMenu:submenu];
 	[mainMenu setSubmenu:submenu forItem:menuItem];
-	
-	/* menuItem = [mainMenu addItemWithTitle:@"File" action:NULL keyEquivalent:@""];
-	submenu = [[[NSMenu alloc] initWithTitle:NSLocalizedString(@"File", @"The File menu")] autorelease];
-	[self populateFileMenu:submenu];
-	[mainMenu setSubmenu:submenu forItem:menuItem];
-
-	menuItem = [mainMenu addItemWithTitle:@"Window" action:NULL keyEquivalent:@""];
-	submenu = [[[NSMenu alloc] initWithTitle:NSLocalizedString(@"Window", @"The Window menu")] autorelease];
-	[self populateWindowMenu:submenu];
-	[mainMenu setSubmenu:submenu forItem:menuItem];
-	[NSApp setWindowsMenu:submenu];
-	*/
 
 	[NSApp setMainMenu:mainMenu];
 }
 
+
 +(void)populateApplicationMenu:(NSMenu *)aMenu
 {
-	NSString *applicationName = [NSString stringWithUTF8String:APP_NAME]; //[[NSProcessInfo processInfo] processName];
+	NSString *applicationName = [NSString stringWithUTF8String:APP_NAME];
 	NSMenuItem *menuItem;
 
 	menuItem = [aMenu addItemWithTitle:[NSString stringWithFormat:@"%@ %@", NSLocalizedString(@"About", nil), applicationName]
@@ -294,60 +296,6 @@ static void stopLoop()
 	[menuItem setTarget:NSApp];
 }
 
-+(void)populateWindowMenu:(NSMenu *)aMenu
-{
-	NSMenuItem *menuItem;
-
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Minimize", nil)
-		action:@selector(miniaturize:)
-		keyEquivalent:@"m"];
-	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
-
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Zoom", nil)
-		action:@selector(zoom:)
-		keyEquivalent:@""];
-
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Fullscreen", nil)
-		action:@selector(fullscreen:)
-		keyEquivalent:@"f"];
-	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
-	[menuItem setTarget:[NSApp delegate]];
-
-	[aMenu addItem:[NSMenuItem separatorItem]];
-}
-
-+(void)populateFileMenu:(NSMenu *)aMenu
-{
-	NSMenuItem *menuItem;
-	
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Reload", nil)
-		action:@selector(reload:)
-		keyEquivalent:@"r"];
-	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
-	[menuItem setTarget:view];
-	
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Open...", nil)
-		action:@selector(open:)
-		keyEquivalent:@"o"];
-	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
-	[menuItem setTarget:view];
-	
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Save", nil)
-		action:@selector(save:)
-		keyEquivalent:@"s"];
-	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
-	[menuItem setTarget:view];
-
-	menuItem = [aMenu addItemWithTitle:NSLocalizedString(@"Save As...", nil)
-		action:@selector(saveAs:)
-		keyEquivalent:@"S"];
-	[menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
-	[menuItem setTarget:view];
-}
-
-- (void) applicationWillFinishLaunching: (NSNotification *)notification
-{
-}
 
 NSRect
 InitialWindowSize()
@@ -392,9 +340,6 @@ InitialWindowSize()
 	[window setContentView: view];
 	[view release];
 
-	// event_resize
-	// seticon
-
 	// [[NSApp dockTile] setShowsApplicationBadge: YES];
 	// [[NSApp dockTile] display];
 	
@@ -404,14 +349,14 @@ InitialWindowSize()
 	[window makeKeyAndOrderFront:nil];
 }
 
+
 -(void)applicationWillTerminate:(NSNotification *)notification
 {
+	stopLoop();
 	App_OnDestroy();
 	[window release];
-	stopLoop();
-	
-	NSLog(@"Terminating...");
 }
+
 
 -(void)bringTextToFocus
 {
@@ -423,11 +368,11 @@ InitialWindowSize()
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-	//puts("closed!");
 	[NSApp stop:self];
 }
 
 @end
+
 
 // - (void)fullscreen:(NSNotification *)notification
 void fullscreen()
@@ -451,6 +396,7 @@ void fullscreen()
 		isfullscreen = 1;
 	}
 }
+
 
 int main(int argc, char **argv)
 {
@@ -477,4 +423,3 @@ int main(int argc, char **argv)
 	[pool release];
 	return 0;
 }
-
