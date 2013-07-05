@@ -68,6 +68,7 @@ SRC = \
   utf8.c \
   rune.c \
   scroll.c \
+  files.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2

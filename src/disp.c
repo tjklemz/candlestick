@@ -359,7 +359,7 @@ Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 			} else {
 				int i;
 				for(i = 0; i < files->len; ++i) {
-					Fnt_Print(fnt_reg, files->data[i], disp_x, start_h + line_height*i, 0);
+					Fnt_Print(fnt_reg, files->names[i], disp_x, start_h + line_height*i, 0);
 				}
 			}
 		
