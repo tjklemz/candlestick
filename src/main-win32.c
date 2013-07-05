@@ -22,6 +22,7 @@
 #include "app.h"
 #include <stdio.h>
 
+
 WNDCLASS wc;
 HWND hWnd;
 HDC hDC;
@@ -31,26 +32,10 @@ BOOL runLoop = FALSE;
 BOOL quit = FALSE;
 BOOL rendering = FALSE;
 
-// Function Declarations
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-#define FPS 25
-static const int SKIP_TICKS = (10000 / FPS);
-
-void uSleep(int waitTime)
-{
-	__int64 time1 = 0, time2 = 0, freq = 0;
-
-	QueryPerformanceCounter((LARGE_INTEGER *)&time1);
-	QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
-
-	do {
-		QueryPerformanceCounter((LARGE_INTEGER *)&time2);
-    //} while ((((time2-time1)*1.0) / freq) < waitTime);
-	} while((time2-time1) < waitTime);
-}
-
-static DWORD WINAPI loop(LPVOID param)
+static
+DWORD
+WINAPI loop(LPVOID param)
 {
 	DWORD next_game_tick = GetTickCount();
 	int sleep_time = 0;
@@ -63,29 +48,35 @@ static DWORD WINAPI loop(LPVOID param)
 		next_game_tick += SKIP_TICKS;
 		sleep_time = next_game_tick - GetTickCount();
 
-		if(sleep_time > 0) {
-			//printf("sleep_time: %d\n", sleep_time);
-			uSleep(sleep_time >> 6);
+		if(sleep_time >= 0) {
+			Sleep(sleep_time);
 		}
 	}
 
 	return 0;
 }
 
-static void startLoop()
+
+static
+void
+startLoop()
 {
 	runLoop = TRUE;
 	CreateThread(NULL, 0, loop, NULL, 0, NULL);
 }
 
-static void stopLoop()
+
+static
+void
+stopLoop()
 {
 	runLoop = FALSE;
 }
 
-// Enable OpenGL
 
-static void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC)
+static
+void
+EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC)
 {
 	PIXELFORMATDESCRIPTOR pfd;
 	int format;
@@ -110,16 +101,20 @@ static void EnableOpenGL(HWND hWnd, HDC * hDC, HGLRC * hRC)
 	wglMakeCurrent(*hDC, *hRC);
 }
 
-// Disable OpenGL
 
-static void DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC)
+static
+void
+DisableOpenGL(HWND hWnd, HDC hDC, HGLRC hRC)
 {
 	wglMakeCurrent(NULL, NULL);
 	wglDeleteContext(hRC);
 	ReleaseDC(hWnd, hDC);
 }
 
-static BOOL enterFullscreen(HWND hWnd) 
+
+static
+BOOL
+enterFullscreen(HWND hWnd) 
 {
     DEVMODE fullscreenSettings;
 
@@ -149,41 +144,218 @@ static BOOL enterFullscreen(HWND hWnd)
     return TRUE;
 }
 
-static BOOL exitFullscreen(HWND hWnd, int windowX, int windowY, int windowedWidth, int windowedHeight, int windowedPaddingX, int windowedPaddingY) 
+
+static
+void
+getWindowPos(HWND hWnd, int * windowX, int * windowY)
+{
+	HDC windowHDC = GetDC(hWnd);
+	int fullscreenWidth  = GetDeviceCaps(windowHDC, HORZRES);
+	int fullscreenHeight = GetDeviceCaps(windowHDC, VERTRES);
+	*windowX = (fullscreenWidth / 2) - (WIN_INIT_WIDTH / 2);
+	*windowY = (fullscreenHeight / 2) - (WIN_INIT_HEIGHT / 2);
+}
+
+
+static
+void
+ClientResize(HWND hWnd, int nWidth, int nHeight)
+{
+	RECT rcClient, rcWind;
+	POINT ptDiff;
+	int border = GetSystemMetrics(SM_CXSIZEFRAME);
+
+	GetClientRect(hWnd, &rcClient);
+	GetWindowRect(hWnd, &rcWind);
+	ptDiff.x = (rcWind.right - rcWind.left) - rcClient.right;
+	ptDiff.y = (rcWind.bottom - rcWind.top) - rcClient.bottom;
+
+	/*
+	 * This moves the window so that when toggling fullscreen,
+	 * the text doesn't move. (Have to compensate for the border.)
+	 */
+	MoveWindow(hWnd, rcWind.left, rcWind.top, 
+		nWidth, nHeight - ptDiff.y + border, TRUE);
+}
+
+
+static
+BOOL
+exitFullscreen(HWND hWnd)
 {
     BOOL isChangeSuccessful;
 
+    int windowX;
+    int windowY;
+
     SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_LEFT);
     SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+
     isChangeSuccessful = ChangeDisplaySettings(NULL, CDS_RESET) == DISP_CHANGE_SUCCESSFUL;
-    SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, windowedWidth + windowedPaddingX, windowedHeight + windowedPaddingY, SWP_SHOWWINDOW);
+
+    // move the window to the middle of the screen
+    getWindowPos(hWnd, &windowX, &windowY);
+    SetWindowPos(hWnd, HWND_NOTOPMOST, windowX, windowY, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, SWP_SHOWWINDOW);
+
+    /* 
+     * Resizes the client (content area) so that the text appears
+     * in the same place whether fullscreen or window mode.
+     */
+    ClientResize(hWnd, WIN_INIT_WIDTH, WIN_INIT_HEIGHT);
     ShowWindow(hWnd, SW_RESTORE);
 
     return isChangeSuccessful;
 }
 
-static void toggleFullscreen()
+
+static
+void
+toggleFullscreen()
 {
 	static BOOL fullscreen = FALSE;
 
 	if(!fullscreen) {
 		fullscreen = enterFullscreen(hWnd);
 	} else {
-		fullscreen = !exitFullscreen(hWnd, 0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT, 0, 0);
+		fullscreen = !exitFullscreen(hWnd);
 	}
 }
 
-static void onQuitRequest()
+
+static
+void
+onQuitRequest()
 {
 	runLoop = FALSE;
 	quit = TRUE;
 }
 
 
-// WinMain
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
-				   LPSTR lpCmdLine, int iCmdShow)
+LRESULT
+CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	static cs_key_mod_t mods = CS_NONE;
+	//static unsigned int painting = 0;
+	//TODO: Unicode and Unichar
+	//static char ch[256];
+
+	switch (message) {
+	case WM_CREATE:
+		return 0;
+
+	case WM_SIZE:
+	{
+		int w = LOWORD(lParam);
+		int h = HIWORD(lParam);
+		App_OnResize(w, h);
+
+		InvalidateRect(hWnd, NULL, TRUE);
+		return 0;
+	}
+
+	case WM_PAINT:
+	{
+		App_OnRender();
+		SwapBuffers(hDC);
+		ValidateRect(hWnd, NULL);
+		return 0;
+	}
+
+	case WM_CLOSE:
+		PostQuitMessage(0);
+		return 0;
+	
+	case WM_QUIT:
+		return 0;
+
+	case WM_DESTROY:
+		return 0;
+
+	case WM_CHAR:
+	{
+		char wide[3] = {0};
+		wide[0] = (char)wParam;
+
+		//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
+		if((unsigned char)wide[0] > 31) {
+			App_OnKeyDown(wide, mods);
+		} else if(wide[0] > 0 && wide[0] <= 26) {
+			if(MODS_COMMAND(mods)) {
+				wide[0] += 'a'-1;
+				//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
+				App_OnKeyDown(wide, mods);
+			} else {
+				switch(wide[0]) {
+				case '\r':
+					wide[0] = '\n';
+					//fall through
+				case '\t':
+				case '\b':
+					App_OnKeyDown(wide, mods);
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+		InvalidateRect(hWnd, NULL, FALSE);
+		return 0;
+	}
+
+	case WM_KEYUP:
+	{
+		switch (wParam)
+		{
+		case VK_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
+		case VK_LEFT:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
+		case VK_RIGHT:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
+		case VK_UP:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
+		case VK_DOWN:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
+		case VK_CONTROL:     mods ^= CS_CONTROL;                          break;
+		case VK_SHIFT:       mods ^= CS_SHIFT;                            break;
+		default:
+			break;
+		}
+
+		InvalidateRect(hWnd, NULL, FALSE);
+		return 0;
+	}
+		
+	case WM_KEYDOWN:
+	{
+		switch (wParam)
+		{
+		case VK_ESCAPE:      App_OnSpecialKeyDown(CS_ESCAPE,mods);        break;
+		case VK_LEFT:        App_OnSpecialKeyDown(CS_ARROW_LEFT,mods);    break;
+		case VK_RIGHT:       App_OnSpecialKeyDown(CS_ARROW_RIGHT,mods);   break;
+		case VK_UP:          App_OnSpecialKeyDown(CS_ARROW_UP,mods);      break;
+		case VK_DOWN:        App_OnSpecialKeyDown(CS_ARROW_DOWN,mods);    break;
+		case VK_CONTROL:     mods |= CS_CONTROL;                          break;
+		case VK_SHIFT:       mods |= CS_SHIFT;                            break;
+		default:
+			break;
+		}
+
+		InvalidateRect(hWnd, NULL, FALSE);
+		return 0;
+	}
+
+	default:
+		break;
+	}
+
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+
+int
+WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+               LPSTR lpCmdLine, int iCmdShow)
+{
+	int windowX;
+	int windowY;
+
 	// register window class
 	wc.style = CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
@@ -196,13 +368,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	wc.lpszMenuName = NULL;
 	wc.lpszClassName = (LPCSTR)APP_NAME;
 	RegisterClass(&wc);
+
+	getWindowPos(NULL, &windowX, &windowY);
 	
 	// create main window
-	hWnd = CreateWindow( 
+	hWnd = CreateWindow(
 		(LPCSTR)APP_NAME, (LPCSTR)APP_NAME, 
 		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-		0, 0, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
+		windowX, windowY, WIN_INIT_WIDTH, WIN_INIT_HEIGHT,
 		NULL, NULL, hInstance, NULL);
+
+	ClientResize(hWnd, WIN_INIT_WIDTH, WIN_INIT_HEIGHT);
 	
 	// enable OpenGL for the window
 	EnableOpenGL(hWnd, &hDC, &hRC);
@@ -212,7 +388,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	App_AnimationDel(startLoop, stopLoop);
 	App_QuitRequestDel(onQuitRequest);
 	
-	while(GetMessage(&msg, NULL, 0, 0) > 0 && !quit) {
+	while(!quit && GetMessage(&msg, NULL, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
@@ -228,129 +404,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	
 	return 0;
 	//return (int)msg.wParam;
-}
-
-/*inline cs_key_mod_t translateVK(int vk)
-{
-	switch(vk)
-	{
-	case VK_LCONTROL:    return CS_CONTROL_L;    break;
-	case VK_RCONTROL:    return CS_CONTROL_R;    break;
-	case VK_LSHIFT:      return CS_SHIFT_L;      break;
-	case VK_RSHIFT:      return CS_SHIFT_R;      break;
-	case VK_LMENU:       return CS_SUPER_L;      break;
-	case VK_RMENU:       return CS_SUPER_R;      break;
-	default:             return CS_NONE;         break;
-	}
-}*/
-
-// Window Procedure
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	static cs_key_mod_t mods = CS_NONE;
-	//static unsigned int painting = 0;
-	//TODO: Unicode and Unichar
-	//static char ch[256];
-
-	switch (message)
-	{
-	case WM_CREATE:
-		return 0;
-
-	case WM_SIZE:
-		{
-			int w = LOWORD(lParam);
-			int h = HIWORD(lParam);
-			App_OnResize(w, h);
-		}
-		InvalidateRect(hWnd, NULL, TRUE);
-		return 0;
-
-	case WM_PAINT:
-		//printf("painting... %d\n", painting++);
-		App_OnRender();
-		SwapBuffers(hDC);
-		ValidateRect(hWnd, NULL);
-		return 0;
-
-	case WM_CLOSE:
-		PostQuitMessage(0);
-		return 0;
-	
-	case WM_QUIT:
-		return 0;
-
-	case WM_DESTROY:
-		return 0;
-
-	case WM_CHAR:
-		{
-			char wide[3] = {0};
-			wide[0] = (char)wParam;
-
-			//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
-			if((unsigned char)wide[0] > 31) {
-				App_OnKeyDown(wide, mods);
-			} else if(wide[0] > 0 && wide[0] <= 26) {
-				if(MODS_COMMAND(mods)) {
-					wide[0] += 'a'-1;
-					//printf("key: %c, code: %d\n", (unsigned char)wide[0], (int)wide[0]);
-					App_OnKeyDown(wide, mods);
-				} else {
-					switch(wide[0]) {
-					case '\r':
-						wide[0] = '\n';
-						//fall through
-					case '\t':
-					case '\b':
-						App_OnKeyDown(wide, mods);
-						break;
-					default:
-						break;
-					}
-				}
-			}
-		}
-		InvalidateRect(hWnd, NULL, FALSE);
-		return 0;
-
-	case WM_KEYUP:
-		switch (wParam)
-		{
-		case VK_ESCAPE:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
-		case VK_LEFT:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
-		case VK_RIGHT:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
-		case VK_UP:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
-		case VK_DOWN:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
-		case VK_CONTROL:     mods ^= CS_CONTROL;                          break;
-		case VK_SHIFT:       mods ^= CS_SHIFT;                            break;
-		default:
-			break;
-		}
-		InvalidateRect(hWnd, NULL, FALSE);
-		return 0;
-		
-	case WM_KEYDOWN:
-		switch (wParam)
-		{
-		case VK_F1:
-			PostQuitMessage(0);
-			break;
-		case VK_ESCAPE:      App_OnSpecialKeyDown(CS_ESCAPE,mods);        break;
-		case VK_LEFT:        App_OnSpecialKeyDown(CS_ARROW_LEFT,mods);    break;
-		case VK_RIGHT:       App_OnSpecialKeyDown(CS_ARROW_RIGHT,mods);   break;
-		case VK_UP:          App_OnSpecialKeyDown(CS_ARROW_UP,mods);      break;
-		case VK_DOWN:        App_OnSpecialKeyDown(CS_ARROW_DOWN,mods);    break;
-		case VK_CONTROL:     mods |= CS_CONTROL;                          break;
-		case VK_SHIFT:       mods |= CS_SHIFT;                            break;
-		default:
-			break;
-		}
-		InvalidateRect(hWnd, NULL, FALSE);
-		return 0;
-	default:
-		break;
-	}
-
-	return DefWindowProc(hWnd, message, wParam, lParam);
 }

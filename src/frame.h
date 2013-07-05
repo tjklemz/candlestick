@@ -24,11 +24,11 @@
 #include <stdio.h>
 #include "line.h"
 
-/* A study at Wichita State University found that CPL had only small effects 
- * on readability, including factors of speed and comprehension. When asked 
- * for preferences, however, 60% of respondents indicated a preference for 
+/* A study at Wichita State University found that CPL had only small effects
+ * on readability, including factors of speed and comprehension. When asked
+ * for preferences, however, 60% of respondents indicated a preference for
  * either the shortest (35 CPL) or longest (95 CPL) lines used in the study.
- * At the same time, 100% of respondents selected either one of these 
+ * At the same time, 100% of respondents selected either one of these
  * quantities as being the least desirable.
  * <http://psychology.wichita.edu/surl/usabilitynews/72/LineLength.asp>
  *

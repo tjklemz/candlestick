@@ -62,6 +62,7 @@ static Node * files = 0;
 
 static anim_del_t * anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
+static int is_fullscreen = 0;
 static quit_del_func_t quit_del = 0;
 
 static cs_app_state_t app_state = CS_TYPING;
@@ -76,20 +77,19 @@ static scrolling_t * cur_scroll;
 #    define DOCS_FOLDER "./documents/"
 #endif
 
-#define EXT_LEN 4
-#define MAX_FILE_CHARS (CHARS_PER_LINE - EXT_LEN)
+#define FILE_EXT ".txt"
+#define FILE_EXT_LEN 4
+#define MAX_FILE_CHARS (CHARS_PER_LINE - FILE_EXT_LEN)
+
 
 void
 App_OnInit()
 {	
-	//checks if already initialized; if so, don't recreate the frame
-	//using this for the linux app; should probably refactor so that
-	// these funcs can be re-called (kinda like malloc vs realloc)
-	//OR, could refactor so that the Display module has a pointer struct
-	// that way can create and destroy the Display easier...
-	//This simple check is fine for now, but if it gets any more
-	// complicated, definitely need to refactor.
-	//c.f. main.c on the linux fullscreen issue that caused this mess.
+	/* 
+	 * Linux requires that a new window be created when going
+	 * to fullscreen. This code makes sure that the frame doesn't
+	 * get destroyed/recreated on a re-entry.
+	 */
 	if(!frm) {
 		frm = Frame_Init();
 		text_scroll.update = Scroll_TextScroll;
@@ -105,6 +105,7 @@ App_OnInit()
 	app_state = CS_TYPING;
 	cur_scroll = &text_scroll;
 }
+
 
 static
 void
@@ -123,6 +124,7 @@ App_DestroyFilesList()
 		files = 0;
 	}
 }
+
 
 void
 App_OnDestroy()
@@ -146,11 +148,13 @@ App_OnDestroy()
 	frm = 0;
 }
 
+
 void
 App_OnResize(int w, int h)
 {
 	Disp_Resize(w, h);
 }
+
 
 void
 App_OnRender()
@@ -168,10 +172,10 @@ App_OnRender()
 		Disp_OpenScreen(files, &open_scroll);
 		break;
 	default:
-		puts("Not ok! What is being rendered?");
 		break;
 	}
 }
+
 
 /**************************************************************************
  * OnUpdate
@@ -191,6 +195,7 @@ App_OnUpdate()
 	}
 }
 
+
 void
 App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods)
 {
@@ -206,18 +211,16 @@ App_OnSpecialKeyUp(cs_key_t key, cs_key_mod_t mods)
 	}
 }
 
+
 void
 App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 {
 	switch(key) {
 	case CS_ARROW_UP:
-		if(cur_scroll) {
-			Scroll_UpRequested(cur_scroll);
-		}
-		break;
 	case CS_ARROW_DOWN:
 		if(cur_scroll) {
-			Scroll_DownRequested(cur_scroll);
+			scrolling_dir_t dir = (key == CS_ARROW_UP) ? SCROLL_UP : SCROLL_DOWN;
+			Scroll_Requested(cur_scroll, dir);
 		}
 		break;
 	case CS_ESCAPE:
@@ -229,12 +232,18 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 		} else if(app_state == CS_OPENING) {
 			app_state = CS_TYPING;
 			cur_scroll = &text_scroll;
+		} else if(app_state == CS_TYPING) {
+			if(is_fullscreen && fullscreen_del) {
+				fullscreen_del();
+				is_fullscreen = 0;
+			}
 		}
 		break;
 	default:
 		break;
 	}
 }
+
 
 static
 void
@@ -252,8 +261,9 @@ App_OnChar(char * ch)
 		break;
 	//ignore the carriage return
 	case '\r':
-		printf("whoa! carriage returns are old school. try the linefeed from now on. strlen: %d\n", (int)strlen(ch));
-		break;	
+		fprintf(stderr, "whoa! carriage returns are old school.\ntry the linefeed from now on. strlen: %d\n", (int)strlen(ch));
+		break;
+
 	/* Handle just newlines.
 	 * This is the default behaviour of Mac/Unix (that is, '\n'),
 	 * but Windows still uses '\r\n'. So, just ignore the '\r'.
@@ -269,6 +279,7 @@ App_OnChar(char * ch)
 		break;
 	}
 }
+
 
 /**************************************************************************
  * File management
@@ -301,15 +312,18 @@ App_Read(FILE * file)
 		exit(2);
 	}
 	
-	printf("Got mem, now reading...\n");
+	//printf("Got mem, now reading...\n");
 	
 	result = fread(buffer, 1, len, file);
+
+	//printf("len: %ld result: %ld", len, result);
+
 	if(result != len) {
 		fputs("Reading error for App_Read", stderr);
 		exit(3);
 	}
 	
-	printf("Read into mem, now filling the frame with len: %ld\n", len);
+	//printf("Read into mem, now filling the frame with len: %ld\n", len);
 	
 	for(i = 0; i < len; i += size) {
 		chartorune(&rune, &buffer[i]);
@@ -326,14 +340,11 @@ App_Read(FILE * file)
 		//printf("Got char of size: %d\n", size);
 		
 		App_OnChar(ch);
-		
-		/*if(i % 4096 == 0) {
-			printf("Filled %ld bytes...\n", i);
-		}*/
 	}
 	
 	free(buffer);
 }
+
 
 /**************************************************************************
  * CreateFullFilename
@@ -361,6 +372,7 @@ App_CreateFullFilename(char * filename)
 	return full_filename;
 }
 
+
 /**************************************************************************
  * SaveFilename
  *
@@ -377,6 +389,7 @@ App_SaveFilename(char * the_filename)
 	Line_InsertStr(filename, the_filename);
 }
 
+
 static
 void
 App_Open(char * the_filename)
@@ -387,7 +400,7 @@ App_Open(char * the_filename)
 	full_filename = App_CreateFullFilename(the_filename);
 	
 	printf("Opening file: %s\n", full_filename);
-	file = fopen(full_filename, "r");
+	file = fopen(full_filename, "rb");
 	
 	if(!file) {
 		fprintf(stderr, "Could not open requested file!\n");
@@ -408,6 +421,7 @@ App_Open(char * the_filename)
 	free(full_filename);
 }
 
+
 static
 void
 App_CheckDocsFolder()
@@ -427,6 +441,7 @@ App_CheckDocsFolder()
 #endif
 }
 
+
 static
 void
 App_Save()
@@ -439,7 +454,7 @@ App_Save()
 	App_CheckDocsFolder();
 	
 	printf("Saving to file: %s\n", full_filename);
-	file = fopen(full_filename, "w");
+	file = fopen(full_filename, "wb");
 	
 	Frame_Write(frm, file);
 	
@@ -450,15 +465,17 @@ App_Save()
 	puts("...Done.");
 }
 
+
 static
 void
 App_SaveAs()
 {
 	//tack on the .txt extension
-	Line_InsertStr(filename, ".txt");
+	Line_InsertStr(filename, FILE_EXT);
 	
 	App_Save();
 }
+
 
 /**************************************************************************
  * PopulateFiles
@@ -498,7 +515,7 @@ App_PopulateFiles()
 			if(stat(filename_full, &st) != -1) {
 				if(S_ISREG(st.st_mode & S_IFMT)) {
 					int len = strlen(dp->d_name);
-					if(len > 4 && !strcmp(&dp->d_name[len - 4], ".txt")) {
+					if(len > 4 && !strcmp(&dp->d_name[len - 4], FILE_EXT)) {
 						//alloc storage for the filename
 						Node * file = Node_Init();
 						char * filename = malloc(file_len + 1);
@@ -529,7 +546,7 @@ App_PopulateFiles()
 		long hFile;
 
 		char search[60];
-		sprintf(search, "%s*.txt", DOCS_FOLDER);
+		sprintf(search, "%s*%s", DOCS_FOLDER, FILE_EXT);
 
 		hFile = _findfirst(search, &file_d);
 
@@ -559,6 +576,7 @@ App_PopulateFiles()
 	
 	return num_files;
 }
+
 
 static
 void
@@ -592,6 +610,7 @@ App_OnCharSave(char * ch)
 	}
 }
 
+
 static
 void
 App_OnCharOpen(char * ch)
@@ -624,34 +643,32 @@ App_OnCharOpen(char * ch)
 	}
 }
 
+
 void
 App_OnKeyDown(char * ch, cs_key_mod_t mods)
 {	
 	if(MODS_COMMAND(mods)) {
 		switch(*ch) {
 		case 'f':
-			puts("fullscreen command combo...");
 			if(fullscreen_del) {
 				fullscreen_del();
+				is_fullscreen = !is_fullscreen;
 			}
 			break;
 		case 'o':
-			puts("open command combo...");
 			if(app_state == CS_TYPING) {
 				app_state = CS_OPENING;
 				Scroll_Reset(&open_scroll);
-				open_scroll.limit = (double)(App_PopulateFiles() - 1);
+				open_scroll.limit = App_PopulateFiles() - 1;
 				cur_scroll = &open_scroll;
 			}
 			break;
 		case 'q':
-			puts("quit command combo...");
 			if(quit_del) {
 				quit_del();
 			}
 			break;
 		case 's':
-			puts("save command combo...");
 			if(app_state == CS_TYPING) {
 				if(!filename) {
 					app_state = CS_SAVING;
@@ -663,7 +680,6 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 			}
 			break;
 		default:
-			puts("invalid command combo...");
 			break;
 		}
 	} else {
@@ -677,6 +693,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 		}
 	}
 }
+
 
 /**************************************************************************
  * Delegates
@@ -696,20 +713,18 @@ App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
 	
 	Scroll_AnimationDel(&open_scroll, anim_del);
 	Scroll_AnimationDel(&text_scroll, anim_del);
-	
-	puts("Animation delegates set.");
 }
+
 
 void
 App_FullscreenDel(void (*ToggleFullscreen)(void))
 {
 	fullscreen_del = ToggleFullscreen;
-	puts("Fullscreen delegates set.");
 }
+
 
 void
 App_QuitRequestDel(void (*Quit)(void))
 {
 	quit_del = Quit;
-	puts("Quit delegates set.");
 }

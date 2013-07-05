@@ -19,7 +19,7 @@ ARCHIVE = $(APPNAME).tar.bz2
 #  since this program links to Cocoa.
 # On Windows and Linux, the compile time is almost
 #  negligible.
-CC = cc -Wall -O2
+CC = cc -Wall -Os
 
 ifdef DEBUG
 	CC += -g
@@ -48,6 +48,8 @@ SRCDIR = src
 LIBDIR = lib/$(PLAT)/$(ARCH)
 RESDIR = res
 OUTDIR = package
+# doctor. ha ha.
+DOCDIR = documents
 APPDIR = $(APPNAME)app
 MACAPP = $(APPNAME).app
 FONTDIR = $(RESDIR)/common/font
@@ -77,7 +79,11 @@ ifeq ($(PLAT),win32)
 	GL_LIBS = -lopengl32 -lglu32
 	FT_LIBS = $(LIBDIR)/freetype.lib
 	MAIN_SRC = main-win32.c
-else ifeq ($(PLAT),mac)
+else
+	SRC += timesub.c
+endif
+
+ifeq ($(PLAT),mac)
 	OS_LIBS	= -framework Cocoa
 	GL_LIBS = -framework OpenGL
 	FT_LIBS = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a $(LIBDIR)/libbz2.a
@@ -142,6 +148,7 @@ package-common: $(BINARY) $(RESDIR)/common/*
 	@echo
 	@echo "Packaging $(APPNAME)..."
 	@mkdir -p $(OUTDIR)/$(APPDIR)
+	@mkdir -p $(OUTDIR)/$(APPDIR)/$(DOCDIR)
 
 .PHONY: package
 package: package-$(PLAT)

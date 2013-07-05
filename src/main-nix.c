@@ -29,11 +29,10 @@
 #include "app.h"
 #include "utf.h"
 #include "keysym2ucs.h"
+#include "timesub.h"
 
 #include <X11/Xatom.h>
 
-#define FPS 25
-static const int SKIP_TICKS = (10000 / FPS);
 
 static Display * dpy;
 static Window root;
@@ -51,97 +50,75 @@ static Atom wmDeleteMessage;
 
 static pthread_t loop_thread;
 static int runLoop = 0;
+static int stopRequested = 0;
 
-int
-timeval_subtract (struct timeval * result, struct timeval *x, struct timeval *y)
-{
-	/* Perform the carry for the later subtraction by updating y. */
-       if (x->tv_usec < y->tv_usec) {
-         int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-         y->tv_usec -= 1000000 * nsec;
-         y->tv_sec += nsec;
-       }
-       if (x->tv_usec - y->tv_usec > 1000000) {
-         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-         y->tv_usec += 1000000 * nsec;
-         y->tv_sec -= nsec;
-       }
-     
-       /* Compute the time remaining to wait.
-          tv_usec is certainly positive. */
-       result->tv_sec = x->tv_sec - y->tv_sec;
-       result->tv_usec = x->tv_usec - y->tv_usec;
-     
-       /* Return 1 if result is negative. */
-       return x->tv_sec < y->tv_sec;
-}
 
 static
 void *
 loop(void * q)
 {
-	//XEvent exp;
-	//Display * d;
+	XEvent exp;
+	Display * d;
 	
 	struct timeval then;
 	struct timeval now;
 	struct timeval diff;
-	double sleep_time = 0.0;
+	useconds_t sleep_time = 0;
 	
 	gettimeofday(&then, NULL);
 	
-	//d = XOpenDisplay(NULL);
-	//puts("begin looping");
+	d = XOpenDisplay(NULL);
 	
-	while(runLoop)
-	{	
-        App_OnUpdate();
-		
-		// sends Expose event (to redraw)
-		//XLockDisplay(dpy);
-		//XClearArea(d, win, 0, 0, 0, 0, True);
-		//XFlush(d);
-		//XUnlockDisplay(dpy);
-		
-		//XLockDisplay(dpy);
-		//memset(&exp, 0, sizeof(exp));
-		//exp.type = Expose;
-		//exp.xexpose.window = win;
-		//XSendEvent(d, win, False, ExposureMask, &exp);
-		//XFlush(d);
-		//XUnlockDisplay(dpy);
+	memset(&exp, 0, sizeof(exp));
+	exp.type = Expose;
+	exp.xexpose.window = win;
+	XSendEvent(d, win, False, ExposureMask, &exp);
+	XFlush(d);
+	
+	while(runLoop && !stopRequested) {
+		App_OnUpdate();
 		
 		then.tv_usec += SKIP_TICKS;
 		gettimeofday(&now, NULL);
 		
 		if(!timeval_subtract(&diff, &then, &now)) {
-			sleep_time = (diff.tv_sec / 10000.0) + diff.tv_usec;
+			sleep_time = /*(diff.tv_sec / 10000.0) + */ diff.tv_usec;
 			usleep(sleep_time);
+			//printf("sleep_time: %d diff.tv_sec: %d\n", sleep_time, diff.tv_sec);
 		}
 	}
-	//puts("done with loop");
-	//XFlush(d);
-	//XCloseDisplay(d);
-	//pthread_exit(0);
+	
+	memset(&exp, 0, sizeof(exp));
+	exp.type = Expose;
+	exp.xexpose.window = win;
+	XSendEvent(d, win, False, ExposureMask, &exp);
+	XFlush(d);
+	
+	XCloseDisplay(d);
+	
+	runLoop = 0;
 	
 	return NULL;
 }
+
 
 static
 void
 startLoop()
 {
 	runLoop = 1;
+	stopRequested = 0;
 	pthread_create(&loop_thread, NULL, loop, NULL);
 }
+
 
 static
 void
 stopLoop()
 {
-	runLoop = 0;
-	//puts("loop should stop now");
+	stopRequested = 1;
 }
+
 
 static
 void
@@ -150,6 +127,7 @@ EnableOpenGL()
 	glc = glXCreateContext(dpy, vi, NULL, GL_TRUE);
 	glXMakeCurrent(dpy, win, glc);
 }
+
 
 static
 void
@@ -162,6 +140,7 @@ DestroyWindow()
 	XCloseDisplay(dpy);
 }
 
+
 static
 void
 Quit()
@@ -169,6 +148,7 @@ Quit()
 	DestroyWindow();
 	exit(0);
 }
+
 
 static
 void
@@ -184,7 +164,7 @@ CreateWindow()
 	dpy = XOpenDisplay(NULL);
 
 	if(dpy == NULL) {
-		puts("\n\tcannot connect to X server\n");
+		fprintf(stderr, "\n\tcannot connect to X server\n");
 		exit(0);
 	}
 
@@ -192,7 +172,7 @@ CreateWindow()
 	vi = glXChooseVisual(dpy, 0, att);
 
 	if(vi == NULL) {
-		puts("\n\tno appropriate visual found\n");
+		fprintf(stderr, "\n\tno appropriate visual found\n");
 		exit(0);
 	} 
 
@@ -256,6 +236,7 @@ CreateWindow()
 	XRaiseWindow(dpy, win);
 }
 
+
 void
 ToggleFullscreen()
 {
@@ -265,12 +246,13 @@ ToggleFullscreen()
 	App_OnInit();
 }
 
+
 void
 OnQuitRequest()
 {
-	puts("Quit requested...");
 	quit = 1;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -289,13 +271,12 @@ int main(int argc, char *argv[])
 	App_QuitRequestDel(OnQuitRequest);
 
 	while(!quit) {
-		while(!quit && (XPending(dpy) || !runLoop)) {
+		if(XPending(dpy) || !runLoop) {
 			XNextEvent(dpy, &xev);
-			
+		
 			//have to manually handle the window close message
 			if (xev.type == ClientMessage &&
 				xev.xclient.data.l[0] == wmDeleteMessage) {
-				puts("Quitting...");
 				quit = 1;
 			} else if(xev.type == Expose) {
 				XWindowAttributes old_gwa = gwa;
@@ -305,8 +286,6 @@ int main(int argc, char *argv[])
 				if(old_gwa.width != gwa.width || old_gwa.height != gwa.height) {
 					App_OnResize(gwa.width, gwa.height);
 				}
-				
-				//puts("ready for redraw (exposed)");
 			} else if(xev.type == KeyPress) {
 				//pass in shifted so that it returns uppercase/lowercase
 				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
@@ -345,35 +324,49 @@ int main(int argc, char *argv[])
 					}
 					break;
 				}
+				//puts("key press");
 			} else if(xev.type == KeyRelease) {
-				//pass in shifted so that it returns uppercase/lowercase
-				sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
-				
-				switch(sym) {
-				case XK_Super_L:     mods ^= CS_SUPER_L;                          break;
-				case XK_Super_R:     mods ^= CS_SUPER_R;                          break;
-				case XK_Alt_L:       mods ^= CS_ALT_L;                            break;
-				case XK_Alt_R:       mods ^= CS_ALT_R;                            break;
-				case XK_Control_L:   mods ^= CS_CONTROL_L;                        break;
-				case XK_Control_R:   mods ^= CS_CONTROL_R;                        break;
-				case XK_Shift_L:     mods ^= CS_SHIFT_L;                          break;
-				case XK_Shift_R:     mods ^= CS_SHIFT_R;                          break;
-				case XK_Escape:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
-				case XK_Left:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
-				case XK_Right:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
-				case XK_Up:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
-				case XK_Down:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
-				default:
-					break;
+				unsigned short is_retriggered = 0;
+
+				if(XEventsQueued(dpy, QueuedAfterReading)) {
+					XEvent nev;
+					XPeekEvent(dpy, &nev);
+					
+					if (nev.type == KeyPress && 
+						nev.xkey.time == xev.xkey.time &&
+						nev.xkey.keycode == xev.xkey.keycode) {
+						// delete retriggered KeyPress event
+						// XNextEvent(dpy, &xev);
+						is_retriggered = 1;
+					}
+				}
+
+				if(!is_retriggered) {
+					//puts("real key release");
+					//pass in shifted so that it returns uppercase/lowercase
+					sym = XLookupKeysym(&xev.xkey, MODS_SHIFTED(mods));
+					
+					switch(sym) {
+					case XK_Super_L:     mods ^= CS_SUPER_L;                          break;
+					case XK_Super_R:     mods ^= CS_SUPER_R;                          break;
+					case XK_Alt_L:       mods ^= CS_ALT_L;                            break;
+					case XK_Alt_R:       mods ^= CS_ALT_R;                            break;
+					case XK_Control_L:   mods ^= CS_CONTROL_L;                        break;
+					case XK_Control_R:   mods ^= CS_CONTROL_R;                        break;
+					case XK_Shift_L:     mods ^= CS_SHIFT_L;                          break;
+					case XK_Shift_R:     mods ^= CS_SHIFT_R;                          break;
+					case XK_Escape:      App_OnSpecialKeyUp(CS_ESCAPE,mods);          break;
+					case XK_Left:        App_OnSpecialKeyUp(CS_ARROW_LEFT,mods);      break;
+					case XK_Right:       App_OnSpecialKeyUp(CS_ARROW_RIGHT,mods);     break;
+					case XK_Up:          App_OnSpecialKeyUp(CS_ARROW_UP,mods);        break;
+					case XK_Down:        App_OnSpecialKeyUp(CS_ARROW_DOWN,mods);      break;
+					default:
+						break;
+					}
 				}
 			}
-			
-			if(!runLoop) {
-				App_OnRender();
-				glXSwapBuffers(dpy, win);
-			}
 		}
-		
+
 		App_OnRender();
 		glXSwapBuffers(dpy, win);
 	}

@@ -26,6 +26,7 @@
 #include <math.h>
 
 #define LINE_HEIGHT 1.95f
+#define OPEN_SCREEN_LINE_HEIGHT 40
 
 
 /**************************************************************************
@@ -326,6 +327,7 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 	int line;
 	int heading_h = 112;
 	int start_h = heading_h + 46;
+	float scroll_amt = scroll->amt * line_height;
 	
 	glPushMatrix();
 		glLoadIdentity();
@@ -333,9 +335,17 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		PushScreenCoordMat();
 		
 		glPushMatrix();
+
+			if(files) {
+				DRAWING_COLOR
 		
-			if(files && (int)ceil(scroll->amt) > num_lines) {
-				glTranslatef(0.0f, -(int)ceil((scroll->amt - num_lines)*line_height), 0.0f);
+				if((int)ceil(scroll->amt) > num_lines) {
+					scroll_amt = (int)ceil((scroll->amt - num_lines)*line_height);
+					Disp_DrawOpenCursor(disp_x - 36, 138 + num_lines*line_height);
+					glTranslatef(0.0f, -scroll_amt /* ceil((scroll->amt - num_lines)*line_height) */, 0.0f);
+				} else {
+					Disp_DrawOpenCursor(disp_x - 36, 138 + scroll_amt);
+				}
 			}
 
 			TEXT_COLOR
@@ -347,10 +357,6 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 				for(cur = files, line = 0; cur; cur = cur->next, ++line) {
 					Fnt_Print(fnt_reg, (char*)cur->data, disp_x, start_h + line_height*line, 0);
 				}
-			
-				DRAWING_COLOR
-			
-				Disp_DrawOpenCursor(disp_x - 36, 138 + scroll->amt*line_height);
 			}
 		
 		glPopMatrix();
@@ -360,8 +366,8 @@ Disp_OpenScreen(Node * files, scrolling_t * scroll)
 		//draw a box so that any scrolling lines go under it
 		glBegin(GL_QUADS);
 			glVertex2f(disp_x, 0);
-			glVertex2f(disp_x, heading_h + 8);
-			glVertex2f(disp_w - disp_x, heading_h + 8);
+			glVertex2f(disp_x, heading_h + 12);
+			glVertex2f(disp_w - disp_x, heading_h + 12);
 			glVertex2f(disp_w - disp_x, 0);
 		glEnd();
 		
