@@ -59,19 +59,16 @@ Files_Populate()
 		
 		while((dp = readdir(dfd))) {
 			struct stat st = {0};
-			int file_len = strlen(dp->d_name);
-			char * filename_full = malloc(strlen(dp->d_name) + strlen(DOCS_FOLDER) + 1);
+			int len = strlen(dp->d_name);
+			char * filename_full = malloc(len + strlen(DOCS_FOLDER) + 1);
 			
 			sprintf(filename_full, "%s%s", DOCS_FOLDER, dp->d_name);
 			
 			//only do something if the thing is an actual file and is .txt
 			if(stat(filename_full, &st) != -1) {
 				if(S_ISREG(st.st_mode & S_IFMT)) {
-
-					int len = strlen(dp->d_name);
-
 					if(len > 4 && !strcmp(&dp->d_name[len - 4], FILE_EXT)) {
-						Files_Append(files, dp->d_name)
+						Files_Append(files, dp->d_name);
 					}
 				}
 			}
