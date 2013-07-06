@@ -39,6 +39,9 @@ void
 Disp_TriggerSaveAnim();
 
 void
+Disp_TriggerSaveErrAnim();
+
+void
 Disp_UpdateAnim();
 
 void
@@ -48,7 +51,7 @@ void
 Disp_TypingScreen(Frame * frm, scrolling_t * scroll);
 
 void
-Disp_SaveScreen(char * filename);
+Disp_SaveScreen(char * filename, int error);
 
 void
 Disp_OpenScreen(files_t * files, scrolling_t * scroll);

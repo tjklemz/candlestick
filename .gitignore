@@ -16,3 +16,4 @@ package/**/*
 *.pdb
 *.cache
 *.suo
+*.swp

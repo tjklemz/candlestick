@@ -39,12 +39,15 @@ static Fnt * fnt_reg = 0;
 
 static int save_anim = 0;
 static int save_anim_amt = 0;
+static int save_err_anim = 0;
+static double save_err_anim_amt = 0;
 static anim_del_t * anim_del = 0;
 
 static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 
 #define TEXT_COLOR     glColor3ub(50, 31, 20);
 #define DRAWING_COLOR  glColor3ub(64, 64, 64);
+#define ERR_COLOR      glColor3ub(199, 31, 0);
 #define BG_COLOR       glColor3f(0.8825f, 0.8825f, 0.87f);
 
 
@@ -64,11 +67,11 @@ Disp_Init(int fnt_size)
 
 	glShadeModel(GL_SMOOTH);
 	//NOTE: background color matched with TEXT_COLOR
-    glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
-    glClearDepth(1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glClearColor(0.8825f, 0.8825f, 0.87f, 0.0f);
+	glClearDepth(1.0f);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 
 void
@@ -94,36 +97,76 @@ Disp_TriggerSaveAnim()
 	Anim_Start(anim_del);
 }
 
+void
+Disp_TriggerSaveErrAnim()
+{
+	save_err_anim = 1;
+	Anim_Start(anim_del);
+}
+
 
 #define ANIM_AMT_MAX 80
 
+static
 void
-Disp_UpdateAnim()
+Disp_UpdateSaveAnim()
 {
 	static int amt = 1;
 	static int step = 1;
 
-	if(save_anim) {
-		++step;
+	++step;
 
-		if(step % 10 == 0) {
-			save_anim_amt += amt*(1 + (step >> 6));
-		}
-
-		//printf("save_anim_amt: %d\n", save_anim_amt);
+	if(step % 10 == 0) {
+		save_anim_amt += amt*(1 + (step >> 6));
 
 		if(save_anim_amt > ANIM_AMT_MAX) {
 			save_anim_amt = ANIM_AMT_MAX;
 			amt = -amt;
 		} else if(save_anim_amt < 0) {
 			amt = -amt;
-			save_anim_amt = 0;
 
+			save_anim_amt = 0;
 			save_anim = 0;
+			step = 1;
 
 			Anim_End(anim_del);
-			step = 1;
 		}
+	}
+}
+
+static
+void
+Disp_UpdateSaveErrAnim()
+{
+	static int t = 0;
+	static int step = 0;
+
+	++step;
+
+	if(step % 6 == 0) {
+		save_err_anim_amt = 16*sin(t)*exp(-0.2*t);
+		
+		if(t++ > 20) {
+			save_err_anim = 0;
+			save_err_anim_amt = 0.0;
+			step = 0;
+			t = 0;
+
+			Anim_End(anim_del);
+			//puts("done anim");
+		}
+	}
+}
+
+void
+Disp_UpdateAnim()
+{
+	if(save_anim) {
+		Disp_UpdateSaveAnim();
+	}
+
+	if(save_err_anim) {
+		Disp_UpdateSaveErrAnim();
 	}
 }
 
@@ -307,7 +350,7 @@ Disp_DrawInputBox(int left, int right, int middle)
 }
 
 void
-Disp_SaveScreen(char * filename)
+Disp_SaveScreen(char * filename, int err)
 {
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*Fnt_Width(fnt_reg))) / 2);
 	float disp_y = disp_h / 2;
@@ -317,8 +360,13 @@ Disp_SaveScreen(char * filename)
 
 		PushScreenCoordMat();
 
-		DRAWING_COLOR
-		Disp_DrawSaveIcon(disp_x, disp_y - 84);
+		if(err) {
+			ERR_COLOR
+		} else {
+			DRAWING_COLOR
+		}
+
+		Disp_DrawSaveIcon(disp_x, disp_y - 84 - (int)round(save_err_anim_amt));
 		Disp_DrawInputBox(disp_x, disp_w - disp_x, disp_y);
 
 		PopScreenCoordMat();

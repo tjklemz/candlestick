@@ -62,6 +62,8 @@ static fullscreen_del_func_t fullscreen_del = 0;
 static int is_fullscreen = 0;
 static quit_del_func_t quit_del = 0;
 
+static int save_err = 0;
+
 static cs_app_state_t app_state = CS_TYPING;
 static scrolling_t open_scroll = {0};
 static scrolling_t text_scroll = {0};
@@ -161,7 +163,7 @@ App_OnRender()
 		Disp_TypingScreen(frm, &text_scroll);
 		break;
 	case CS_SAVING:
-		Disp_SaveScreen(Line_Text(filename_buf));
+		Disp_SaveScreen(Line_Text(filename_buf), save_err);
 		break;
 	case CS_OPENING:
 		Disp_OpenScreen(files, &open_scroll);
@@ -423,57 +425,76 @@ App_Save()
 	return 0;
 }
 
+static
+Line*
+App_CreateFileName()
+{
+	Line * file = 0;
+	int len;
+
+	len = strlen(Line_Text(filename_buf));
+
+	if(len > 0) {
+		file = Line_Init(len);
+		//copy the buffer
+		Line_InsertStr(file, Line_Text(filename_buf));
+		//tack on the .txt extension
+		Line_InsertStr(file, FILE_EXT);
+	}
+
+	return file;
+}
+
+
+static
+int
+App_TestSave()
+{
+	int valid = 0;
+	Line * test = 0;
+
+	test = App_CreateFileName();
+	
+	if(test) {
+		char * test_filename = 0;
+		char * full_test_filename = 0;
+
+		//create a full filename from the copy
+		test_filename = Line_Text(test);
+		full_test_filename = Files_GetAbsPath(test_filename);
+
+		valid = !Files_Exists(full_test_filename);
+		
+		free(full_test_filename);
+		Line_Destroy(test);
+	}
+	
+	return valid;
+}
+
 
 static
 int
 App_SaveAs()
 {
 	int saved = 0;
-	char * test_filename;
-	char * full_test_filename;
-	Line * test;
-	int len;
 
-	len = strlen(Line_Text(filename_buf));
-
-	if(len > 0) {
-
-		test = Line_Init(len);
-		//copy the buffer
-		Line_InsertStr(test, Line_Text(filename_buf));
-		//tack on the .txt extension
-		Line_InsertStr(test, FILE_EXT);
-
-		//create a full filename from the copy
-		test_filename = Line_Text(test);
-		full_test_filename = Files_GetAbsPath(test_filename);
-
-		/*
-		 * If the file already exists, don't do anything.
-		 * This is why the copy was made (test), so that
-		 * upon returning, if nothing happened, the buffer
-		 * is still there, untouched.
-		 */
-
-		if(!Files_Exists(full_test_filename)) {
-			Line_Destroy(filename);
-			filename = test;
-
-			saved = App_Save();
-
-			// don't destroy the buffer if something went wrong,
-			// although we're kinda screwed...
-			if(saved) {
-				Line_Destroy(filename_buf);
-				filename_buf = 0;
-			}
-		} else {
-			Line_Destroy(test);
-		}
-
-		free(full_test_filename);
-	}
+	Line * file = App_CreateFileName();
 	
+	if(file) {
+		Line_Destroy(filename);
+		filename = file;
+
+		saved = App_Save();
+
+		// don't destroy the buffer if something went wrong,
+		// although we're kinda screwed...
+		if(saved) {
+			Line_Destroy(filename_buf);
+			filename_buf = 0;
+		}
+	}
+
 	return saved;
 }
 
@@ -487,9 +508,12 @@ App_OnCharSave(char * ch)
 		break;
 	case '\n':
 	case '\r':
-		if(App_SaveAs()) {
+		save_err = !(App_TestSave() && App_SaveAs());
+		if(!save_err) {
 			app_state = CS_TYPING;
 			cur_scroll = &text_scroll;
+		} else {
+			Disp_TriggerSaveErrAnim();
 		}
 		break;
 	case 127:
@@ -501,6 +525,10 @@ App_OnCharSave(char * ch)
 			Line_InsertCh(filename_buf, ch);
 		}
 		break;
+	}
+
+	if(app_state == CS_SAVING && filename_buf && Line_Text(filename_buf)) {
+		save_err = !App_TestSave();
 	}
 }
 
@@ -570,6 +598,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 		case 's':
 			if(app_state == CS_TYPING) {
 				if(!filename) {
+					save_err = 0;
 					app_state = CS_SAVING;
 					cur_scroll = NULL;
 					filename_buf = Line_Init(CHARS_PER_LINE);
