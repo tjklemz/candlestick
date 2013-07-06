@@ -70,6 +70,7 @@ SRC = \
   scroll.c \
   files.c \
   natcmp.c \
+  anim.c \
   $(NULL)
 
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2

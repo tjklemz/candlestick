@@ -36,12 +36,9 @@ static
 void
 Scroll_AnimStart(scrolling_t * scroll)
 {
-	anim_del_t * anim_del = scroll->anim_del;
-		
-	if(anim_del && !anim_del->called_start) {
-		anim_del->on_start();
-		anim_del->called_start = 1;
-		anim_del->called_end = 0;
+	if(!scroll->anim_del->called_start) {
+		scroll->moving = 1;
+		Anim_Start(scroll->anim_del);
 	}
 }
 
@@ -50,19 +47,13 @@ void
 Scroll_AnimEnd(scrolling_t * scroll)
 {
 	if(!scroll->requested && !scroll->moving) {
-		anim_del_t * anim_del = scroll->anim_del;
-		
-		if(anim_del && !anim_del->called_end) {
-			anim_del->on_end();
-			anim_del->called_end = 1;
-			anim_del->called_start = 0;
-		}
+		Anim_End(scroll->anim_del);
 	}
 }
 
 void Scroll_TextScroll(scrolling_t * scroll)
 {
-	if((scroll->step < NUM_STEPS || scroll->requested)) {
+	if((scroll->moving && scroll->step < NUM_STEPS) || scroll->requested) {
 		float amt = (scroll->dir == SCROLL_UP) ? STEP_AMT : -STEP_AMT;
 		
 		scroll->amt += amt*pow((double)scroll->step, 1.22);

@@ -37,11 +37,25 @@ static int disp_h = 1;
 static int disp_w = 1;
 static Fnt * fnt_reg = 0;
 
+static int save_anim = 0;
+static int save_anim_amt = 0;
+static anim_del_t * anim_del = 0;
+
 static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
 
 #define TEXT_COLOR     glColor3ub(50, 31, 20);
 #define DRAWING_COLOR  glColor3ub(64, 64, 64);
 #define BG_COLOR       glColor3f(0.8825f, 0.8825f, 0.87f);
+
+
+static
+void
+Disp_DrawSaveIcon(int x, int y);
+
+static
+void
+Disp_DrawOpenIcon(int x, int y);
+
 
 void
 Disp_Init(int fnt_size)
@@ -76,8 +90,49 @@ Disp_BeginRender()
 void
 Disp_TriggerSaveAnim()
 {
-	
+	save_anim = 1;
+	Anim_Start(anim_del);
 }
+
+
+#define ANIM_AMT_MAX 80
+
+void
+Disp_UpdateAnim()
+{
+	static int amt = 1;
+	static int step = 1;
+
+	if(save_anim) {
+		++step;
+
+		if(step % 10 == 0) {
+			save_anim_amt += amt*(1 + (step >> 6));
+		}
+
+		//printf("save_anim_amt: %d\n", save_anim_amt);
+
+		if(save_anim_amt > ANIM_AMT_MAX) {
+			save_anim_amt = ANIM_AMT_MAX;
+			amt = -amt;
+		} else if(save_anim_amt < 0) {
+			amt = -amt;
+			save_anim_amt = 0;
+
+			save_anim = 0;
+
+			Anim_End(anim_del);
+			step = 1;
+		}
+	}
+}
+
+void
+Disp_AnimDel(anim_del_t * the_anim_del)
+{
+	anim_del = the_anim_del;
+}
+
 
 #define DISP_LINE_PADDING 2
 
@@ -89,9 +144,10 @@ Disp_TypingScreen(Frame * frm, scrolling_t * scroll)
 	//window coords for start of frame
 	float fnt_width = Fnt_Width(fnt_reg);
 	float line_height = Fnt_LineHeight(fnt_reg) * 1.55 * fnt_width;
+
 	float disp_x = (int)((disp_w - (CHARS_PER_LINE*fnt_width)) / 2);
-	//printf("disp_x: %f, disp_w: %d, fnt_width: %f\n", disp_x, disp_w, fnt_width);
 	float disp_y = 5 + disp_h / 2;
+
 	int num_lines;
 	int first_line;
 	int show_cursor;
@@ -118,10 +174,21 @@ Disp_TypingScreen(Frame * frm, scrolling_t * scroll)
 	// scroll the display appropriately, minus the part that isn't viewable
 	// NOTE: (0, 0) in screen coords is now the top left of the window
 	disp_y = disp_y - line_height * (-scroll_amt + first_line - 1);
-	
-	//printf("num_lines: %d\tfirst_line: %d\tdisp_y: %f\n", num_lines, first_line, disp_y);
 
 	glPushMatrix();
+		if(save_anim) {
+			glPushMatrix();
+			glLoadIdentity();
+
+			PushScreenCoordMat();
+
+			DRAWING_COLOR
+			Disp_DrawOpenIcon(disp_w - save_anim_amt, disp_h - 90);
+
+			PopScreenCoordMat();
+			glPopMatrix();
+		}
+
 		TEXT_COLOR
 		glLoadIdentity();
 		Fnt_PrintFrame(fnt_reg, frm, disp_x, disp_y, num_lines + DISP_LINE_PADDING, show_cursor);
@@ -388,6 +455,7 @@ Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 		PopScreenCoordMat();
 	glPopMatrix();
 }
+
 
 void
 Disp_Resize(int w, int h)

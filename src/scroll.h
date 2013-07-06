@@ -21,17 +21,10 @@
 #ifndef SCROLL_H
 #define SCROLL_H
 
-typedef void (*anim_del_func_t)(void);
+#include "anim.h"
 
 struct scrolling_tag;
 typedef void (*scroll_func_t)(struct scrolling_tag *);
-
-typedef struct {
-	anim_del_func_t on_start;
-	int called_start;
-	anim_del_func_t on_end;
-	int called_end;
-} anim_del_t;
 
 typedef enum {
 	SCROLL_UP,

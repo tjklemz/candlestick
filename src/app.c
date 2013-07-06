@@ -52,11 +52,12 @@ static Frame * frm = 0;
 static Line * filename = 0;
 static Line * filename_buf = 0;
 
-files_t * files = 0; 
+static files_t * files = 0; 
 
 static update_title_del_func_t update_title_del = 0;
 
-static anim_del_t * anim_del = 0;
+static anim_del_t * scroll_anim_del = 0;
+static anim_del_t * disp_anim_del = 0;
 static fullscreen_del_func_t fullscreen_del = 0;
 static int is_fullscreen = 0;
 static quit_del_func_t quit_del = 0;
@@ -64,7 +65,7 @@ static quit_del_func_t quit_del = 0;
 static cs_app_state_t app_state = CS_TYPING;
 static scrolling_t open_scroll = {0};
 static scrolling_t text_scroll = {0};
-static scrolling_t * cur_scroll;
+static scrolling_t * cur_scroll = 0;
 
 
 static
@@ -121,8 +122,10 @@ App_OnInit()
 void
 App_OnDestroy()
 {
-	free(anim_del);
-	anim_del = 0;
+	Anim_Destroy(scroll_anim_del);
+	scroll_anim_del = 0;
+	Anim_Destroy(disp_anim_del);
+	disp_anim_del = 0;
 	
 	Line_Destroy(filename);
 	filename = 0;
@@ -185,6 +188,9 @@ App_OnUpdate()
 	if(cur_scroll) {
 		Scroll_Update(cur_scroll);
 	}
+
+	// doesn't display, just updates (a clue that this should be extracted)
+	Disp_UpdateAnim();
 }
 
 
@@ -598,18 +604,14 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 
 void
 App_AnimationDel(void (*OnStart)(void), void (*OnEnd)(void))
-{
-	assert(anim_del == 0);
+{	
+	scroll_anim_del = Anim_Init(OnStart, OnEnd);
+	disp_anim_del = Anim_Init(OnStart, OnEnd);
 	
-	anim_del = (anim_del_t *)malloc(sizeof(anim_del_t));
-	
-	anim_del->on_start = OnStart;
-	anim_del->called_start = 0;
-	anim_del->on_end = OnEnd;
-	anim_del->called_end = 0;
-	
-	Scroll_AnimationDel(&open_scroll, anim_del);
-	Scroll_AnimationDel(&text_scroll, anim_del);
+	Scroll_AnimationDel(&open_scroll, scroll_anim_del);
+	Scroll_AnimationDel(&text_scroll, scroll_anim_del);
+
+	Disp_AnimDel(disp_anim_del);
 }
 
 

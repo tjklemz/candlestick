@@ -23,14 +23,13 @@
 #include <stdio.h>
 
 
-WNDCLASS wc;
-HWND hWnd;
-HDC hDC;
-HGLRC hRC;
-MSG msg;
-BOOL runLoop = FALSE;
-BOOL quit = FALSE;
-BOOL rendering = FALSE;
+static WNDCLASS wc;
+static HWND hWnd;
+static HDC hDC;
+static HGLRC hRC;
+static MSG msg;
+static BOOL runLoop = FALSE;
+static BOOL quit = FALSE;
 
 
 static

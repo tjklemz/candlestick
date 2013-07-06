@@ -24,6 +24,7 @@
 #include "frame.h"
 #include "scroll.h"
 #include "files.h"
+#include "anim.h"
 
 void
 Disp_Init(int fnt_size);
@@ -36,6 +37,12 @@ Disp_BeginRender();
 
 void
 Disp_TriggerSaveAnim();
+
+void
+Disp_UpdateAnim();
+
+void
+Disp_AnimDel(anim_del_t * anim_del);
 
 void
 Disp_TypingScreen(Frame * frm, scrolling_t * scroll);
