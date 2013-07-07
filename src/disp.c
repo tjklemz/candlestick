@@ -111,23 +111,22 @@ static
 void
 Disp_UpdateSaveAnim()
 {
-	static int amt = 1;
-	static int step = 1;
+	static int t = 1;
+	static int step = 0;
+	
+	double h = 60.0;
+	double w = 30.0;
 
 	++step;
 
-	if(step % 10 == 0) {
-		save_anim_amt += amt*(1 + (step >> 6));
+	if(step % 6 == 0) {
+		save_anim_amt = h * (sin((M_PI*t)/w) + (1/3.0)*sin((3*M_PI*t)/w) + (1/5.0)*sin((5*M_PI*t)/w));
 
-		if(save_anim_amt > ANIM_AMT_MAX) {
-			save_anim_amt = ANIM_AMT_MAX;
-			amt = -amt;
-		} else if(save_anim_amt < 0) {
-			amt = -amt;
-
-			save_anim_amt = 0;
+		if(t++ > (int)w) {
 			save_anim = 0;
-			step = 1;
+			save_anim_amt = 0;
+			step = 0;
+			t = 1;
 
 			Anim_End(anim_del);
 		}
@@ -220,13 +219,16 @@ Disp_TypingScreen(Frame * frm, scrolling_t * scroll)
 
 	glPushMatrix();
 		if(save_anim) {
+			int x = disp_w - (disp_x / 2) - 22;
+			int y = disp_h - (int)round(save_anim_amt);
+
 			glPushMatrix();
 			glLoadIdentity();
 
 			PushScreenCoordMat();
 
 			DRAWING_COLOR
-			Disp_DrawOpenIcon(disp_w - save_anim_amt, disp_h - 90);
+			Disp_DrawSaveIcon(x, y);
 
 			PopScreenCoordMat();
 			glPopMatrix();
