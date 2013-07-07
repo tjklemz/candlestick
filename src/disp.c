@@ -106,8 +106,8 @@ Disp_TriggerSaveErrAnim()
 
 
 #define ANIM_AMT_MAX 80
-#define ANIM_W 30.0
-#define ANIM_H 55.0
+#define ANIM_W 50.0
+#define ANIM_H 50.0
 
 static
 void
@@ -118,8 +118,16 @@ Disp_UpdateSaveAnim()
 
 	++step;
 
-	if(step % 4 == 0) {
-		save_anim_amt = (2*ANIM_H/3) + (ANIM_H/3) * (sin((M_PI*t)/ANIM_W) + (1/3.0)*sin((3*M_PI*t)/ANIM_W) /* + (1/5.0)*sin((5*M_PI*t)/ANIM_W) */ );
+	if(step % 2 == 0) {
+		//save_anim_amt = (2*ANIM_H/3) + (ANIM_H/3) * (sin((M_PI*t)/ANIM_W) + (1/3.0)*sin((3*M_PI*t)/ANIM_W) /* + (1/5.0)*sin((5*M_PI*t)/ANIM_W) */ );
+
+		int i, k;
+
+		save_anim_amt = (2*ANIM_H/3);
+		for(i = 0; i < 2; ++i) {
+			k = 2*i + 1;
+			save_anim_amt += (ANIM_H/3) * (1.0/k)*sin((k*M_PI*t)/ANIM_W);
+		}
 
 		if(t++ > (int)(ANIM_W)) {
 			save_anim = 0;
@@ -455,7 +463,7 @@ Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 		
 		glPushMatrix();
 
-			if(files) {
+			if(files->len > 0) {
 				DRAWING_COLOR
 		
 				if((int)ceil(scroll->amt) > num_lines) {
@@ -470,7 +478,7 @@ Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 			TEXT_COLOR
 
 			//print files
-			if(!files) {
+			if(files->len == 0) {
 				Fnt_Print(fnt_reg, "No files.", disp_x, start_h, 0);
 			} else {
 				int i;
