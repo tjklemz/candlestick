@@ -71,6 +71,11 @@ static scrolling_t * cur_scroll = 0;
 
 
 static
+int
+App_Save();
+
+
+static
 void
 App_UpdateTitle(int dirty)
 {
@@ -108,6 +113,9 @@ App_OnInit()
 		open_scroll.on_update = Scroll_OpenScroll;
 
 		App_UpdateTitle(1);
+
+		app_state = CS_TYPING;
+		cur_scroll = &text_scroll;
 	} else {
 		Disp_Destroy();
 		text_scroll.requested = 0;
@@ -115,15 +123,17 @@ App_OnInit()
 	}
 	
 	Disp_Init(FONT_SIZE);
-	
-	app_state = CS_TYPING;
-	cur_scroll = &text_scroll;
 }
 
 
 void
 App_OnDestroy()
 {
+	// attempt to autosave before quiting
+	if(filename && Line_Text(filename)) {
+		App_Save();
+	}
+
 	Anim_Destroy(scroll_anim_del);
 	scroll_anim_del = 0;
 	Anim_Destroy(disp_anim_del);
