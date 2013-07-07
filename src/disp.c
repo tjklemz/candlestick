@@ -106,23 +106,22 @@ Disp_TriggerSaveErrAnim()
 
 
 #define ANIM_AMT_MAX 80
+#define ANIM_W 30.0
+#define ANIM_H 55.0
 
 static
 void
 Disp_UpdateSaveAnim()
 {
-	static int t = 1;
+	static int t = 0;
 	static int step = 0;
-	
-	double h = 60.0;
-	double w = 30.0;
 
 	++step;
 
-	if(step % 6 == 0) {
-		save_anim_amt = h * (sin((M_PI*t)/w) + (1/3.0)*sin((3*M_PI*t)/w) + (1/5.0)*sin((5*M_PI*t)/w));
+	if(step % 4 == 0) {
+		save_anim_amt = (2*ANIM_H/3) + (ANIM_H/3) * (sin((M_PI*t)/ANIM_W) + (1/3.0)*sin((3*M_PI*t)/ANIM_W) /* + (1/5.0)*sin((5*M_PI*t)/ANIM_W) */ );
 
-		if(t++ > (int)w) {
+		if(t++ > (int)(ANIM_W)) {
 			save_anim = 0;
 			save_anim_amt = 0;
 			step = 0;
