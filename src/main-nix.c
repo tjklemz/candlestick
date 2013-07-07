@@ -101,14 +101,17 @@ loop(void * q)
 	return NULL;
 }
 
+static int num_anims = 0;
 
 static
 void
 startLoop()
 {
-	runLoop = 1;
-	stopRequested = 0;
-	pthread_create(&loop_thread, NULL, loop, NULL);
+	if(num_anims++ == 0) {
+		runLoop = 1;
+		stopRequested = 0;
+		pthread_create(&loop_thread, NULL, loop, NULL);
+	}
 }
 
 
@@ -116,7 +119,10 @@ static
 void
 stopLoop()
 {
-	stopRequested = 1;
+	if(--num_anims <= 0) {
+		stopRequested = 1;
+		num_anims = 0;
+	}
 }
 
 

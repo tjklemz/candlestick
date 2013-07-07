@@ -81,17 +81,23 @@ void updatetitle(char*);
 	[view setNeedsDisplay:YES];
 }
 
+static int num_anims = 0;
 
 static void startLoop()
 {
-	runLoop = TRUE;
-	[NSThread detachNewThreadSelector:@selector(loop) toTarget:view withObject:nil];
+	if(num_anims++ == 0) {
+		runLoop = TRUE;
+		[NSThread detachNewThreadSelector:@selector(loop) toTarget:view withObject:nil];
+	}
 }
 
 
 static void stopLoop()
 {
-	runLoop = FALSE;
+	if(--num_anims <= 0) {
+		runLoop = FALSE;
+		num_anims = 0;
+	}
 }
 
 

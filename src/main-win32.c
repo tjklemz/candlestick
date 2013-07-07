@@ -55,13 +55,16 @@ WINAPI loop(LPVOID param)
 	return 0;
 }
 
+static int num_anims = 0;
 
 static
 void
 startLoop()
 {
-	runLoop = TRUE;
-	CreateThread(NULL, 0, loop, NULL, 0, NULL);
+	if(num_anims++ == 0) {
+		runLoop = TRUE;
+		CreateThread(NULL, 0, loop, NULL, 0, NULL);
+	}
 }
 
 
@@ -69,7 +72,10 @@ static
 void
 stopLoop()
 {
-	runLoop = FALSE;
+	if(--num_anims <= 0) {
+		runLoop = FALSE;
+		num_anims = 0;
+	}
 }
 
 
