@@ -106,30 +106,34 @@ Disp_TriggerSaveErrAnim()
 
 
 #define ANIM_AMT_MAX 80
-#define ANIM_W 50.0
+#define ANIM_W 30.0
 #define ANIM_H 50.0
 
 static
 void
 Disp_UpdateSaveAnim()
 {
-	static int t = 0;
+	static int t = 1;
 	static int step = 0;
 
 	++step;
 
-	if(step % 2 == 0) {
+	if(step % 6 == 0) {
 		//save_anim_amt = (2*ANIM_H/3) + (ANIM_H/3) * (sin((M_PI*t)/ANIM_W) + (1/3.0)*sin((3*M_PI*t)/ANIM_W) /* + (1/5.0)*sin((5*M_PI*t)/ANIM_W) */ );
 
-		int i, k;
+		//int i, k;
 
-		save_anim_amt = (2*ANIM_H/3);
+		/*save_anim_amt = (2*ANIM_H/3);
 		for(i = 0; i < 2; ++i) {
 			k = 2*i + 1;
 			save_anim_amt += (ANIM_H/3) * (1.0/k)*sin((k*M_PI*t)/ANIM_W);
-		}
+		}*/
 
-		if(t++ > (int)(ANIM_W)) {
+		if(t < (int)ANIM_W) {
+			save_anim_amt = (ANIM_H) + (ANIM_H/2) * (-cos(1.2*t-1) / t);
+		} else if(t < (int)(ANIM_W + 10)) {
+			save_anim_amt = ANIM_H + -(t - ANIM_W)*(t - ANIM_W)*(t - ANIM_W);
+		} else {
 			save_anim = 0;
 			save_anim_amt = 0;
 			step = 0;
@@ -137,6 +141,7 @@ Disp_UpdateSaveAnim()
 
 			Anim_End(anim_del);
 		}
+		++t;
 	}
 }
 
