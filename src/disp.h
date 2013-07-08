@@ -42,6 +42,9 @@ void
 Disp_TriggerSaveErrAnim();
 
 void
+Disp_TriggerOpenErrAnim();
+
+void
 Disp_UpdateAnim();
 
 void

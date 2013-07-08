@@ -570,8 +570,10 @@ App_OnCharOpen(char * ch)
 				App_SaveFilename(filename);
 
 				Files_Destroy(files);
+				files = 0;
 			} else {
 				fputs("Error on open...\n", stderr);
+				Disp_TriggerOpenErrAnim();
 			}
 		} else {
 			// this should never happen so long as the scrolling logic stays withing

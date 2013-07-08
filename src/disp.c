@@ -40,7 +40,9 @@ static Fnt * fnt_reg = 0;
 static int save_anim = 0;
 static int save_anim_amt = 0;
 static int save_err_anim = 0;
-static double save_err_anim_amt = 0;
+static double save_err_anim_amt = 0.0;
+static int open_err_anim = 0;
+static double open_err_anim_amt = 0.0;
 static anim_del_t * anim_del = 0;
 
 static const char * const fnt_reg_name = "./font/Lekton-Regular.ttf";
@@ -104,6 +106,13 @@ Disp_TriggerSaveErrAnim()
 	Anim_Start(anim_del);
 }
 
+void
+Disp_TriggerOpenErrAnim()
+{
+	open_err_anim = 1;
+	Anim_Start(anim_del);
+}
+
 
 #define ANIM_AMT_MAX 80
 #define ANIM_W 30.0
@@ -119,15 +128,26 @@ Disp_UpdateSaveAnim()
 	++step;
 
 	if(step % 6 == 0) {
-		//save_anim_amt = (2*ANIM_H/3) + (ANIM_H/3) * (sin((M_PI*t)/ANIM_W) + (1/3.0)*sin((3*M_PI*t)/ANIM_W) /* + (1/5.0)*sin((5*M_PI*t)/ANIM_W) */ );
+		/*
+		 * There are two options here: one is to do a fourier series
+		 * to mimic a square wave, the other is to do a piece-wise
+		 * function that starts as a decreasing sinusoidal wave then
+		 * turns into a decreasing exponential after a certain time.
+		 *
+		 * The first option works fine, but the second option produces
+		 * a smoother, more cartoonish animation that I personally prefer.
+		 */
 
-		//int i, k;
-
-		/*save_anim_amt = (2*ANIM_H/3);
+		/* The fourier:
+		int i, k;
+		save_anim_amt = (2*ANIM_H/3);
 		for(i = 0; i < 2; ++i) {
 			k = 2*i + 1;
 			save_anim_amt += (ANIM_H/3) * (1.0/k)*sin((k*M_PI*t)/ANIM_W);
 		}*/
+
+		// the piecewise, with sinusoidal (a bessel function actually), and
+		// decreasing cubic at the end:
 
 		if(t < (int)ANIM_W) {
 			save_anim_amt = (ANIM_H) + (ANIM_H/2) * (-cos(1.2*t-1) / t);
@@ -164,8 +184,34 @@ Disp_UpdateSaveErrAnim()
 			t = 0;
 
 			Anim_End(anim_del);
-			//puts("done anim");
 		}
+	}
+}
+
+static
+void
+Disp_UpdateOpenErrAnim()
+{
+	static int t = 0;
+	static int step = 0;
+
+	++step;
+
+	if(step % 8 == 0) {
+		if(t < 18) {
+			open_err_anim_amt = 40*sin(t)*exp(-0.35*t);
+		} else if(t < 20) {
+			open_err_anim_amt = 0.0;
+		} else {
+			open_err_anim = 0;
+			open_err_anim_amt = 0.0;
+			step = 0;
+			t = 0;
+
+			Anim_End(anim_del);
+		}
+		
+		++t;
 	}
 }
 
@@ -178,6 +224,10 @@ Disp_UpdateAnim()
 
 	if(save_err_anim) {
 		Disp_UpdateSaveErrAnim();
+	}
+
+	if(open_err_anim) {
+		Disp_UpdateOpenErrAnim();
 	}
 }
 
@@ -460,6 +510,8 @@ Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 	int heading_h = 112;
 	int start_h = heading_h + 46;
 	float scroll_amt = scroll->amt * line_height;
+	int open_cursor_x = (int)(disp_x - 36 - open_err_anim_amt);
+
 	
 	glPushMatrix();
 		glLoadIdentity();
@@ -469,14 +521,18 @@ Disp_OpenScreen(files_t * files, scrolling_t * scroll)
 		glPushMatrix();
 
 			if(files->len > 0) {
-				DRAWING_COLOR
+				if(open_err_anim) {
+					ERR_COLOR
+				} else {
+					DRAWING_COLOR
+				}
 		
 				if((int)ceil(scroll->amt) > num_lines) {
 					scroll_amt = (int)ceil((scroll->amt - num_lines)*line_height);
-					Disp_DrawOpenCursor(disp_x - 36, 138 + num_lines*line_height);
+					Disp_DrawOpenCursor(open_cursor_x, 138 + num_lines*line_height);
 					glTranslatef(0.0f, -scroll_amt /* ceil((scroll->amt - num_lines)*line_height) */, 0.0f);
 				} else {
-					Disp_DrawOpenCursor(disp_x - 36, 138 + scroll_amt);
+					Disp_DrawOpenCursor(open_cursor_x, 138 + scroll_amt);
 				}
 			}
 
