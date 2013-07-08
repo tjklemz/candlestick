@@ -257,7 +257,7 @@ App_OnSpecialKeyDown(cs_key_t key, cs_key_mod_t mods)
 
 static
 void
-App_OnChar(char * ch)
+App_OnChar(char * ch, Frame * frm)
 {
 	switch(*ch) {
 	case '\t':
@@ -296,7 +296,7 @@ App_OnChar(char * ch)
  **************************************************************************/
 
 static
-void
+int
 App_Read(FILE * file)
 {
 	char * buffer;
@@ -306,10 +306,9 @@ App_Read(FILE * file)
 	long i;
 	Rune rune;
 	int size;
+	int valid = 1;
 	
-	//empty the current frame so we can fill it
-	Frame_Destroy(frm);
-	frm = Frame_Init(CHARS_PER_LINE);
+	Frame * new_frm = Frame_Init(CHARS_PER_LINE);
 	
 	//get the file size
 	fseek(file, 0, SEEK_END);
@@ -319,7 +318,7 @@ App_Read(FILE * file)
 	buffer = (char *)malloc(sizeof(char) * len);
 	if (!buffer) {
 		fputs("Memory error for App_Read", stderr); 
-		exit(2);
+		return 0;
 	}
 	
 	//printf("Got mem, now reading...\n");
@@ -330,7 +329,7 @@ App_Read(FILE * file)
 
 	if(result != len) {
 		fputs("Reading error for App_Read", stderr);
-		exit(3);
+		return 0;
 	}
 	
 	//printf("Read into mem, now filling the frame with len: %ld\n", len);
@@ -340,6 +339,7 @@ App_Read(FILE * file)
 		
 		if(rune == Runeerror) {
 			fputs("Bad things happened! Error parsing file as UTF-8.", stderr);
+			valid = 0;
 			break;
 		}
 		
@@ -349,10 +349,19 @@ App_Read(FILE * file)
 		//these print statements really slow down the read...
 		//printf("Got char of size: %d\n", size);
 		
-		App_OnChar(ch);
+		App_OnChar(ch, new_frm);
 	}
 	
 	free(buffer);
+
+	if(valid) {
+		Frame_Destroy(frm);
+		frm = new_frm;
+	} else {
+		Frame_Destroy(new_frm);
+	}
+
+	return valid;
 }
 
 
@@ -390,15 +399,11 @@ App_Open(char * the_filename)
 	
 	if(!file) {
 		fprintf(stderr, "Could not open requested file!\n");
-		// do nothing... (we'll take the Mac approach for now)
 	} else {
-		opened = 1;
-		App_Read(file);
+		opened = App_Read(file);
 
 		fclose(file);
 		printf("...Done.\n");
-
-		App_SaveFilename(the_filename);
 	}
 	
 	free(full_filename);
@@ -562,7 +567,11 @@ App_OnCharOpen(char * ch)
 				cur_scroll = &text_scroll;
 				app_state = CS_TYPING;
 
+				App_SaveFilename(filename);
+
 				Files_Destroy(files);
+			} else {
+				fputs("Error on open...\n", stderr);
 			}
 		} else {
 			// this should never happen so long as the scrolling logic stays withing
@@ -625,7 +634,7 @@ App_OnKeyDown(char * ch, cs_key_mod_t mods)
 	} else {
 		if(app_state == CS_TYPING) {
 			Scroll_Reset(&text_scroll);
-			App_OnChar(ch);
+			App_OnChar(ch, frm);
 
 			App_UpdateTitle(1);
 		} else if(app_state == CS_SAVING) {
