@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdio.h>
 
 /*
  * From an answer by Norman Ramsey on Stack Overflow.
@@ -19,7 +20,7 @@ natstrcmp(const char *s1, const char *s2)
 		else if (*s1 == '\0')
 			return 1;
 		else if (!(isdigit(*s1) && isdigit(*s2))) {
-			if (*s1 != *s2)
+			if (tolower(*s1) != tolower(*s2))
 				return (int)*s1 - (int)*s2;
 			else
 				(++s1, ++s2);
