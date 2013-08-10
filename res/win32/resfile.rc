@@ -1,0 +1,25 @@
+101 ICON C:\Users\tjklemz\Documents\Github\candlestick\res\common\logo\candlestick_logo_new_pad_win32.ico
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "FileDescription", "Candlestick Writing App"
+      VALUE "FileVersion", "1.0"
+      VALUE "InternalName", "candlestick"
+      VALUE "LegalCopyright", "Thomas Klemz"
+      VALUE "OriginalFilename", "candlestick.exe"
+      VALUE "ProductName", "candlestick"
+      VALUE "ProductVersion", "1.0"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END

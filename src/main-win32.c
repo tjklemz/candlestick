@@ -23,7 +23,9 @@
 #include <stdio.h>
 
 
-static WNDCLASS wc;
+#define IDI_APPICON 101
+
+static WNDCLASSEX wc;
 static HWND hWnd;
 static HDC hDC;
 static HGLRC hRC;
@@ -374,17 +376,19 @@ WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	int windowY;
 
 	// register window class
+	wc.cbSize = sizeof(wc);
 	wc.style = CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = hInstance;
-	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_APPICON), IMAGE_ICON, 500, 500, LR_SHARED);;
+	wc.hIconSm = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_APPICON), IMAGE_ICON, 32, 32, LR_SHARED);
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszMenuName = NULL;
 	wc.lpszClassName = (LPCSTR)APP_NAME;
-	RegisterClass(&wc);
+	RegisterClassEx(&wc);
 
 	getWindowPos(NULL, &windowX, &windowY);
 	

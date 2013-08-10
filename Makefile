@@ -76,12 +76,14 @@ SRC = \
 FREETYPE_INC = -I$(SRCDIR)/freetype -I$(SRCDIR)/freetype/freetype2
 
 COMMON_LIBS = -lm
+EXTRA_LIBS = $(NULL)
 
 ifeq ($(PLAT),win32)
 	OS_LIBS = -luser32 -lgdi32 -lkernel32
 	GL_LIBS = -lopengl32 -lglu32
 	FT_LIBS = $(LIBDIR)/freetype.lib
 	MAIN_SRC = main-win32.c
+	EXTRA_LIBS += $(RESDIR)/win32/app.res
 else
 	SRC += timesub.c
 endif
@@ -100,7 +102,7 @@ else ifeq ($(PLAT),nix)
 endif
 
 SOURCE = $(addprefix $(SRCDIR)/, $(SRC) $(MAIN_SRC))
-LDFLAGS = $(COMMON_LIBS) $(OS_LIBS) $(GL_LIBS) $(FT_LIBS)
+LDFLAGS = $(COMMON_LIBS) $(OS_LIBS) $(GL_LIBS) $(FT_LIBS) $(EXTRA_LIBS)
 CFLAGS = $(FREETYPE_INC)
 
 
