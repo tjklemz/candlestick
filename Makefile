@@ -38,7 +38,7 @@ else
 endif
 
 ifeq ($(PLAT),win32)
-	CC += -m32
+	CC += -m32 -mwindows
 	ARCH = x86
 else
 	ARCH = x$(shell getconf LONG_BIT)
