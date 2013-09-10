@@ -42,6 +42,10 @@ ifeq ($(PLAT),win32)
 	ARCH = x86
 else
 	ARCH = x$(shell getconf LONG_BIT)
+	ifeq ($(ARCH),x32)
+		# on Linux, this means it is ARM based
+		ARCH = arm32
+	endif
 endif	
 
 SRCDIR = src
